@@ -1,0 +1,24 @@
+{
+  "name": "@access-control-system/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@access-control-system/db": "workspace:*",
+    "@access-control-system/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@access-control-system/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
