@@ -7,6 +7,12 @@
       "skillPath": "better-auth/best-practices/SKILL.md",
       "computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
     },
+    "hexcore": {
+      "source": "indroic/hexcore-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "ef494175e25582e4f40c0c7b0cede116a5a7ff765505c3af50f8d0a922aaa081"
+    },
     "hono": {
       "source": "yusukebe/hono-skill",
       "sourceType": "github",
