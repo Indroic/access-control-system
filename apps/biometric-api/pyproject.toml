@@ -1,0 +1,24 @@
+[project]
+name = "biometric-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.136.1",
+    "hexcore>=2.0.3",
+    "insightface>=0.7.3",
+    "numpy>=2.4.4",
+    "onnxruntime>=1.25.1",
+    "opencv-python>=4.13.0.92",
+    "pgvector>=0.4.2",
+    "pillow>=12.2.0",
+    "psycopg2-binary>=2.9.12",
+    "pyjwt>=2.12.1",
+    "python-multipart>=0.0.27",
+    "setuptools>=82.0.1",
+    "uvicorn>=0.46.0",
+]
+
+[tool.uv.sources]
+face-recognition-models = { git = "https://github.com/ageitgey/face_recognition_models" }
