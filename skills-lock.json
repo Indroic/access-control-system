@@ -7,6 +7,12 @@
       "skillPath": "better-auth/best-practices/SKILL.md",
       "computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
     },
+    "heroui-native": {
+      "source": "heroui-inc/heroui",
+      "sourceType": "github",
+      "skillPath": "skills/heroui-native/SKILL.md",
+      "computedHash": "d2fc03a13d03678d40799726a144ba72ba1cb08126176ddbf0a0461c901aef29"
+    },
     "hexcore": {
       "source": "indroic/hexcore-skill",
       "sourceType": "github",
