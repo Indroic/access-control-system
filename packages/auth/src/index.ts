@@ -3,6 +3,7 @@ import * as schema from "@access-control-system/db/schema/auth";
 import { env } from "@access-control-system/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { faceBiometricsPlugin } from "./plugins/biometric";
 
 export function createAuth() {
   const db = createDb();
@@ -26,7 +27,9 @@ export function createAuth() {
         httpOnly: true,
       },
     },
-    plugins: [],
+    plugins: [
+      faceBiometricsPlugin(),
+    ],
   });
 }
 
