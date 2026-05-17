@@ -1,0 +1,36 @@
+# ─── Development Dockerfile for Python Biometric API ─────────────────────────
+# Minimal setup - just install toolchain, dependencies via volume mount command
+# Usage: docker-compose up (with docker-compose.override.yml)
+
+FROM python:3.14
+
+# Install development & runtime dependencies (for uv and uvicorn with reload)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    libopenblas-dev \
+    liblapack-dev \
+    libx11-dev \
+    libboost-python-dev \
+    libboost-thread-dev \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install uv for faster dependency management
+RUN pip install --no-cache-dir uv
+
+# Copy dependency files
+COPY apps/biometric-api/pyproject.toml apps/biometric-api/uv.lock ./
+
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+EXPOSE 8000
+
+# Source code and dependency sync handled by docker-compose.override.yml
+# This Dockerfile just provides the environment
+CMD ["echo", "Use docker-compose.override.yml to run the dev server"]

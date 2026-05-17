@@ -1,0 +1,127 @@
+# ─── Development Override ─────────────────────────────────────────────────────
+# Usage: docker-compose up
+# Docker Compose automatically merges this with docker-compose.yml
+# Services run with hot reload and source volumes mounted
+#
+# Note: This file overrides build and image settings to run in dev mode
+# ───────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Hono Backend (Honojs + Hot Reload) ─────────────────────────────────────
+  server:
+    # Override production image build with dev setup
+    build:
+      context: .
+      dockerfile: Dockerfile.dev.server
+      # If the dev Dockerfile doesn't exist yet, fallback to the standard build
+      # but with source volumes for live development
+    image: acs-server:dev
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/access-control-system
+      BETTER_AUTH_SECRET: change-me-to-a-random-32-char-secret!!
+      BETTER_AUTH_URL: http://localhost:3000
+      BIOMETRIC_API_URL: http://biometric-api:8000
+      CORS_ORIGIN: http://localhost:3001
+    volumes:
+      # Mount entire monorepo for pnpm workspace resolution
+      - .:/monorepo
+      # Volume to persist node_modules (avoid installing from host)
+      - server_node_modules:/monorepo/node_modules
+      - server_app_node_modules:/monorepo/apps/server/node_modules
+    working_dir: /monorepo
+    command: pnpm --filter server dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Next.js Frontend (Hot Reload) ──────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev.web
+    image: acs-web:dev
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      NEXT_PUBLIC_SERVER_URL: http://localhost:3000
+    volumes:
+      # Mount entire monorepo
+      - .:/monorepo
+      # Persist node_modules
+      - web_node_modules:/monorepo/node_modules
+      - web_app_node_modules:/monorepo/apps/web/node_modules
+      # .next can be large, exclude it to avoid slowdowns
+      - /monorepo/apps/web/.next
+    working_dir: /monorepo
+    command: pnpm --filter web dev
+    ports:
+      - "3001:3001"
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Python Biometric API (Uvicorn Hot Reload) ─────────────────────────────
+  biometric-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev.biometric
+    image: acs-biometric:dev
+    environment:
+      SQL_DATABASE_URL: postgresql://postgres:password@postgres:5432/biometric_db
+      ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/biometric_db
+      BETTER_AUTH_URL: http://server:3000/api/auth
+      BETTER_AUTH_ISSUER: http://localhost:3000
+      BETTER_AUTH_AUDIENCE: http://localhost:3000
+      PYTHONUNBUFFERED: "1"
+      # Disable bytecode caching for faster reloads
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      # Mount app directory for hot reload
+      - ./apps/biometric-api/src:/app/src
+      # Persist the .venv
+      - biometric_venv:/app/.venv
+      # Cache InsightFace models
+      - insightface_models:/root/.insightface
+    working_dir: /app
+    # Use uvicorn with --reload to watch for changes
+    command: >
+      sh -c "
+        pip install uv --quiet --disable-pip-version-check &&
+        uv sync &&
+        .venv/bin/uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+# ─── Dev Volumes ──────────────────────────────────────────────────────────────
+volumes:
+  server_node_modules:
+  server_app_node_modules:
+  web_node_modules:
+  web_app_node_modules:
+  biometric_venv:

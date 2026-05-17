@@ -4,7 +4,11 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, s
 from hexcore.infrastructure.uow import SqlAlchemyUnitOfWork
 from hexcore.infrastructure.api.utils import get_sql_uow
 
-from src.shared.infrastructure.auth.dependencies import require_admin
+from src.shared.infrastructure.auth.dependencies import (
+    require_admin,
+    verify_one_time_token,
+    OneTimeTokenSession,
+)
 
 from ..domain.exceptions import FaceBiometricNotFound
 from ..application.use_cases import (
@@ -14,6 +18,8 @@ from ..application.use_cases import (
     IdentifyUserCommand,
     IdentificationResponse,
     IdentifyUserUseCase,
+    OpenDoorCommand,
+    OpenDoorUseCase,
 )
 from ..infrastructure.repositories import UserFaceRepository
 
@@ -54,6 +60,11 @@ async def get_identify_use_case(
     y la factory del repositorio.
     """
     return IdentifyUserUseCase(repo=repo)
+
+
+async def get_open_door_use_case() -> OpenDoorUseCase:
+    """Instancia el caso de uso encargado de abrir la puerta."""
+    return OpenDoorUseCase()
 
 
 # --- Endpoints ---
@@ -111,3 +122,21 @@ async def identify_user(
         raise HTTPException(
             status_code=500, detail=f"Error técnico en la identificación: {str(e)}"
         )
+
+
+@router.post("/hardware/open-door", status_code=status.HTTP_200_OK)
+async def open_door(
+    command: OpenDoorCommand,
+    auth_session: OneTimeTokenSession = Depends(verify_one_time_token),
+    use_case: OpenDoorUseCase = Depends(get_open_door_use_case),
+):
+    """Endpoint para abrir una puerta mediante un relé protegido con OTT."""
+    try:
+        result = await use_case.execute(command)
+        return {
+            "status": result.status,
+            "message": result.message,
+            "authorized_user_id": auth_session.user_id,
+        }
+    except NotImplementedError as error:
+        raise HTTPException(status_code=501, detail=str(error)) from error

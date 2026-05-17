@@ -1,0 +1,163 @@
+name: access-control-system
+
+# ─── Common env blocks ────────────────────────────────────────────────────────
+x-db-creds: &db-creds
+  POSTGRES_DB: access-control-system
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+
+x-server-url: &public-server-url http://localhost:3000
+
+# ─── Services ─────────────────────────────────────────────────────────────────
+services:
+
+  # ── PostgreSQL + pgvector ────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: acs-postgres
+    environment:
+      <<: *db-creds
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d access-control-system"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Drizzle migrations (runs once then exits) ─────────────────────────────────
+  migrate:
+    image: node:22-alpine
+    working_dir: /monorepo
+    command: >
+      sh -c "
+        corepack enable &&
+        pnpm install --frozen-lockfile &&
+        pnpm --filter @access-control-system/db db:push
+      "
+    environment:
+      CI: "true"
+      DRIZZLE_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/access-control-system
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/access-control-system
+    volumes:
+      - .:/monorepo
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Alembic migrations – biometric DB (runs once, exits) ─────────────────────
+  biometric-migrate:
+    image: python:3.14
+    container_name: acs-dev-biometric-migrate
+    working_dir: /app
+    command: >
+      sh -c "
+        pip install uv --quiet --disable-pip-version-check &&
+        apt-get update && apt-get install -y postgresql-client --no-install-recommends && rm -rf /var/lib/apt/lists/* &&
+        uv sync --frozen &&
+        echo 'Waiting for PostgreSQL to be ready...' &&
+        until pg_isready -h postgres -U postgres -d biometric_db; do
+          echo 'PostgreSQL is unavailable - sleeping'
+          sleep 2
+        done &&
+        echo 'PostgreSQL is up - running migrations' &&
+        .venv/bin/alembic upgrade head
+      "
+    environment:
+      SQL_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/biometric_db
+      ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/biometric_db
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./apps/biometric-api:/app
+      - biometric_venv:/app/.venv
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Hono backend ─────────────────────────────────────────────────────────────
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: acs-server
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/access-control-system
+      BETTER_AUTH_SECRET: change-me-to-a-random-32-char-secret!!
+      BETTER_AUTH_URL: *public-server-url
+      BIOMETRIC_API_URL: http://biometric-api:8000
+      CORS_ORIGIN: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Next.js frontend ─────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_SERVER_URL: *public-server-url
+    container_name: acs-web
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Python biometric API ──────────────────────────────────────────────────────
+  biometric-api:
+    build:
+      context: .
+      dockerfile: apps/biometric-api/Dockerfile
+    container_name: acs-biometric
+    environment:
+      # Database (pgvector database for face embeddings)
+      SQL_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/biometric_db
+      ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/biometric_db
+      # Better Auth integration (internal Docker URL)
+      BETTER_AUTH_URL: http://server:3000/api/auth
+      BETTER_AUTH_ISSUER: *public-server-url
+      BETTER_AUTH_AUDIENCE: *public-server-url
+    ports:
+      - "8000:8000"
+    volumes:
+      # Cache InsightFace model files across restarts (~400 MB download)
+      - insightface_models:/root/.insightface
+    depends_on:
+      postgres:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+# ─── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  insightface_models:

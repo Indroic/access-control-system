@@ -1,0 +1,21 @@
+# Node
+node_modules
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+
+# Python
+apps/biometric-api/.venv
+apps/biometric-api/__pycache__
+apps/biometric-api/**/__pycache__
+apps/biometric-api/**/*.pyc
+apps/biometric-api/.pytest_cache
+
+# Misc
+.git
+.gitignore
+**/.env
+**/.env.*
+**/docker-compose.yml
+README.md

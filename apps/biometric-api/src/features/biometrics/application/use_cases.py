@@ -76,11 +76,26 @@ class IdentificationResponse(DTO):
     user_id: Optional[str] = None
     match: bool = False
     message: str = ""
-    
+
+
 class WarmupCommand(DTO):
     """Comando para forzar la descarga e inicializacion de los modelos de IA."""
 
     pass
+
+
+class OpenDoorCommand(DTO):
+    """Comando para abrir una puerta mediante relé."""
+
+    door_id: str | None = None
+    reason: str | None = None
+
+
+class OpenDoorResponse(DTO):
+    """Respuesta estructurada para la acción open-door."""
+
+    status: str
+    message: str
 
 
 # =========================================================================
@@ -211,3 +226,13 @@ class IdentifyUserUseCase(UseCase[IdentifyUserCommand, IdentificationResponse]):
             message="Usuario identificado correctamente.",
         )
 
+
+def _open_door_relay(command: OpenDoorCommand) -> OpenDoorResponse:
+    raise NotImplementedError("open-door hardware integration is not implemented yet")
+
+
+class OpenDoorUseCase(UseCase[OpenDoorCommand, OpenDoorResponse]):
+    """Caso de uso para abrir una puerta mediante relé."""
+
+    async def execute(self, command: OpenDoorCommand) -> OpenDoorResponse:
+        return _open_door_relay(command)
