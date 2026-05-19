@@ -1,16 +1,13 @@
-"use client";
-
-import { useState } from "react";
+import type { Route } from "next";
+import { redirect } from "next/navigation";
 
 import SignInForm from "@/components/sign-in-form";
-import SignUpForm from "@/components/sign-up-form";
+import { fetchSetupStatus } from "@/lib/setup-status";
 
-export default function LoginPage() {
-  const [showSignIn, setShowSignIn] = useState(false);
-
-  return showSignIn ? (
-    <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
-  ) : (
-    <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
-  );
+export default async function LoginPage() {
+  const { needsSetup } = await fetchSetupStatus();
+  if (needsSetup) {
+    redirect("/setup" as Route);
+  }
+  return <SignInForm />;
 }

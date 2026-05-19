@@ -1,17 +1,12 @@
-import { cn } from "@access-control-system/ui/lib/utils";
-import * as React from "react";
+"use client";
 
-function Label({ className, ...props }: React.ComponentProps<"label">) {
-  return (
-    <label
-      data-slot="label"
-      className={cn(
-        "flex items-center gap-2 text-xs leading-none select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    />
-  );
+import { Label as HeroLabel } from "@heroui/react";
+import type { ComponentProps } from "react";
+
+type LabelProps = ComponentProps<typeof HeroLabel>;
+
+function Label(props: LabelProps) {
+  return <HeroLabel {...props} />;
 }
 
 export { Label };

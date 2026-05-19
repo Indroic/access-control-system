@@ -19,11 +19,12 @@ services:
     image: acs-server:dev
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/access-control-system
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/access-control-system
       BETTER_AUTH_SECRET: change-me-to-a-random-32-char-secret!!
       BETTER_AUTH_URL: http://localhost:3000
       BIOMETRIC_API_URL: http://biometric-api:8000
       CORS_ORIGIN: http://localhost:3001
+      ADMIN_SETUP_SECRET: change-me-to-a-random-admin-secret
     volumes:
       # Mount entire monorepo for pnpm workspace resolution
       - .:/monorepo
@@ -56,6 +57,7 @@ services:
       NODE_ENV: development
       PORT: 3001
       NEXT_PUBLIC_SERVER_URL: http://localhost:3000
+      INTERNAL_SERVER_URL: http://server:3000
     volumes:
       # Mount entire monorepo
       - .:/monorepo
@@ -80,8 +82,8 @@ services:
       dockerfile: Dockerfile.dev.biometric
     image: acs-biometric:dev
     environment:
-      SQL_DATABASE_URL: postgresql://postgres:password@postgres:5432/biometric_db
-      ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/biometric_db
+      SQL_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/biometric_db
+      ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/biometric_db
       BETTER_AUTH_URL: http://server:3000/api/auth
       BETTER_AUTH_ISSUER: http://localhost:3000
       BETTER_AUTH_AUDIENCE: http://localhost:3000

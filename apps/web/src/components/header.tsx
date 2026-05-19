@@ -1,12 +1,10 @@
 "use client";
 import Link from "next/link";
 
-import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
 
 export default function Header() {
   const links = [
-    { to: "/", label: "Home" },
     { to: "/dashboard", label: "Dashboard" },
   ] as const;
 
@@ -23,7 +21,6 @@ export default function Header() {
           })}
         </nav>
         <div className="flex items-center gap-2">
-          <ModeToggle />
           <UserMenu />
         </div>
       </div>

@@ -1,0 +1,131 @@
+// ============================================================================
+// ER GENERAL — access-control-system
+// ============================================================================
+// Vista unificada de las dos bases de datos lógicas que conviven sobre la
+// misma instancia de Postgres 17 + pgvector.
+//
+// IMPORTANTE: la relación `user_faces.user_id -> user.id` es lógica
+// (cross-database). Postgres no la puede expresar como FK porque cada
+// base es una database independiente. La integridad referencial es
+// responsabilidad de la aplicación (Better-Auth + biometric-api).
+//
+// Render: https://dbdiagram.io  ó  https://dbml.dbdiagram.io/home
+// ============================================================================
+
+Project access_control_system {
+  database_type: 'PostgreSQL'
+  Note: '''
+    Sistema de Control de Acceso Biométrico
+    - DB `access-control-system` -> Drizzle / Better-Auth
+    - DB `biometric_db`            -> Alembic / SQLAlchemy + pgvector
+  '''
+}
+
+// ----------------------------------------------------------------------------
+// Schema lógico: ACS (Better-Auth + dominio de aplicación)
+// ----------------------------------------------------------------------------
+
+Table acs.user as U {
+  id             text       [pk, note: 'Generado por Better-Auth (CUID/ULID)']
+  name           text       [not null]
+  email          text       [not null, unique]
+  email_verified boolean    [not null, default: false]
+  image          text
+  face_registered boolean   [not null, default: false, note: 'Marca si tiene biometría asociada en biometric_db']
+  face_meta      jsonb      [default: `null`, note: 'Snapshot de la respuesta de biometric-api al registrar']
+  created_at     timestamp  [not null, default: `now()`]
+  updated_at     timestamp  [not null, default: `now()`]
+
+  Note: 'Tabla principal de usuarios. Extendida con face_registered/face_meta.'
+}
+
+Table acs.session {
+  id          text       [pk]
+  expires_at  timestamp  [not null]
+  token       text       [not null, unique]
+  created_at  timestamp  [not null, default: `now()`]
+  updated_at  timestamp  [not null]
+  ip_address  text
+  user_agent  text
+  user_id     text       [not null, ref: > U.id, note: 'ON DELETE CASCADE']
+
+  indexes {
+    user_id [name: 'session_userId_idx']
+  }
+}
+
+Table acs.account {
+  id            text       [pk]
+  account_id    text       [not null]
+  provider_id   text       [not null, note: 'p.ej. credential, github, google']
+  user_id       text       [not null, ref: > U.id, note: 'ON DELETE CASCADE']
+  access_token  text
+  refresh_token text
+  id_token      text
+  access_token_expires_at  timestamp
+  refresh_token_expires_at timestamp
+  scope         text
+  password      text       [note: 'Hash de password para provider=credential']
+  created_at    timestamp  [not null, default: `now()`]
+  updated_at    timestamp  [not null]
+
+  indexes {
+    user_id [name: 'account_userId_idx']
+  }
+}
+
+Table acs.verification {
+  id          text       [pk]
+  identifier  text       [not null, note: 'Email u otro identificador']
+  value       text       [not null]
+  expires_at  timestamp  [not null]
+  created_at  timestamp  [not null, default: `now()`]
+  updated_at  timestamp  [not null, default: `now()`]
+
+  indexes {
+    identifier [name: 'verification_identifier_idx']
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Schema lógico: BIO (biometric_db con pgvector)
+// ----------------------------------------------------------------------------
+
+Table bio.user_faces as F {
+  id          uuid       [pk, note: 'BaseEntity de HexCore']
+  user_id     varchar    [not null, note: 'FK lógica -> acs.user.id (sin constraint cross-db)']
+  embedding   "vector(512)" [note: 'normed_embedding de InsightFace buffalo_l']
+  is_active   boolean    [not null]
+  created_at  "timestamp with time zone" [not null]
+  updated_at  "timestamp with time zone" [not null]
+
+  indexes {
+    user_id [name: 'ix_user_faces_user_id']
+  }
+
+  Note: '''
+    Una fila por muestra biométrica. Un mismo user_id puede tener N filas
+    (RegisterBiometricsUseCase inserta una por cada imagen del lote).
+  '''
+}
+
+// ----------------------------------------------------------------------------
+// Relación cross-database (lógica, NO impuesta por Postgres)
+// ----------------------------------------------------------------------------
+
+Ref cross_db_user_faces: F.user_id > U.id [note: 'Lógica - cross-database, validada en aplicación']
+
+// ----------------------------------------------------------------------------
+// Grupos visuales
+// ----------------------------------------------------------------------------
+
+TableGroup "BD: access-control-system (Better-Auth + Drizzle)" {
+  acs.user
+  acs.session
+  acs.account
+  acs.verification
+}
+
+TableGroup "BD: biometric_db (Alembic + pgvector)" {
+  bio.user_faces
+}

@@ -9,6 +9,7 @@ export const env = createEnv({
     BETTER_AUTH_URL: z.url(),
     BIOMETRIC_API_URL: z.url().default("http://localhost:8000"),
     CORS_ORIGIN: z.url(),
+    ADMIN_SETUP_SECRET: z.string().min(16),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   },
   runtimeEnv: process.env,

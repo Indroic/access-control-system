@@ -1,0 +1,44 @@
+// ============================================================================
+// ER ESPECÍFICO — Base de datos `biometric_db`
+// ============================================================================
+// Schema gestionado por Alembic (carpeta apps/biometric-api/alembic/versions).
+// Modelo en src/shared/infrastructure/database/models/__init__.py
+// Extensión requerida: `CREATE EXTENSION pgvector;`
+// ============================================================================
+
+Project biometric_db {
+  database_type: 'PostgreSQL'
+  Note: '''
+    Base de datos vectorial. Almacena embeddings faciales (512-D) generados
+    por InsightFace buffalo_l. Búsqueda 1:N usando distancia L2 de pgvector.
+  '''
+}
+
+Table user_faces as F {
+  id          uuid       [pk, note: 'BaseEntity de HexCore — UUID generado en aplicación']
+  user_id     varchar    [not null, note: 'Identificador del usuario en BD access-control-system (sin FK física)']
+  embedding   "vector(512)" [note: 'normed_embedding de ArcFace (InsightFace). Migración 9382f584012c lo cambió de 128 a 512.']
+  is_active   boolean    [not null, note: 'Soft-delete flag heredado de BaseEntity']
+  created_at  "timestamp with time zone" [not null]
+  updated_at  "timestamp with time zone" [not null]
+
+  indexes {
+    user_id [name: 'ix_user_faces_user_id', note: 'Acelera lookups por usuario (admin: cuántas muestras tiene cada empleado)']
+  }
+
+  Note: '''
+    Cardinalidad: 1 user_id <-> N filas (una por muestra/foto registrada).
+    `RegisterBiometricsUseCase` inserta dentro de un UnitOfWork; si extracción falla,
+    se hace rollback de todo el lote.
+
+    NOTA: Recomendable agregar un índice IVFFlat/HNSW sobre `embedding` para
+    búsquedas 1:N sobre conjuntos grandes:
+        CREATE INDEX ON user_faces USING hnsw (embedding vector_l2_ops);
+  '''
+}
+
+// ----------------------------------------------------------------------------
+// Relaciones lógicas (cross-database, NO impuestas)
+// ----------------------------------------------------------------------------
+
+// La relación con `user` vive en otra database; ver docs/diagramas/03-er-general.dbml
