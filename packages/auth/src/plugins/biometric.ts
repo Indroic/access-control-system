@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer";
 
 import { env } from "@access-control-system/env/server";
 import { createAuthEndpoint } from "better-auth/api";
+import { setSessionCookie } from "better-auth/cookies";
 import type { BetterAuthPlugin, GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
 import { z } from "zod";
@@ -39,10 +40,16 @@ async function callBiometricApi<TResponse>(
     path: string,
     options: { body?: FormData | Record<string, unknown>; method?: "GET" | "POST" } = {},
 ): Promise<TResponse> {
+    const headers = new Headers();
+    if (!(options.body instanceof FormData)) {
+        headers.set("Content-Type", "application/json");
+    }
+    headers.set("Authorization", `Bearer ${env.INTERNAL_API_KEY}`);
+
     const response = await fetch(new URL(path, env.BIOMETRIC_API_URL), {
         method: options.method ?? "POST",
         body: options.body instanceof FormData ? options.body : JSON.stringify(options.body ?? {}),
-        headers: options.body instanceof FormData ? undefined : { "Content-Type": "application/json" },
+        headers,
     });
 
     if (!response.ok) {
@@ -65,7 +72,7 @@ async function registerFaceHandler(ctx: GenericEndpointContext) {
         "face.jpg",
     );
 
-    const result = await callBiometricApi<BiometricRegisterResponse>("/biometrics/register", {
+    const result = await callBiometricApi<BiometricRegisterResponse>("/v1/biometrics/register", {
         body: formData,
     });
 
@@ -94,7 +101,7 @@ async function authenticateFaceHandler(ctx: GenericEndpointContext) {
         "face.jpg",
     );
 
-    const result = await callBiometricApi<BiometricIdentifyResponse>("/biometrics/identify", {
+    const result = await callBiometricApi<BiometricIdentifyResponse>("/v1/biometrics/identify", {
         body: formData,
     });
 
@@ -118,6 +125,11 @@ async function authenticateFaceHandler(ctx: GenericEndpointContext) {
         });
     }
 
+    await setSessionCookie(ctx, {
+        session,
+        user,
+    });
+
     return ctx.json({
         status: true,
         token: session.token,
@@ -135,7 +147,7 @@ async function searchUserByFaceHandler(ctx: GenericEndpointContext) {
         "face.jpg",
     );
 
-    const result = await callBiometricApi<BiometricIdentifyResponse>("/biometrics/identify", {
+    const result = await callBiometricApi<BiometricIdentifyResponse>("/v1/biometrics/identify", {
         body: formData,
     });
 

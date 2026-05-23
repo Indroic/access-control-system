@@ -1,44 +1,38 @@
-# ── Stage 1: install & build ─────────────────────────────────────────────────
+# ── Stage 1: install & build (TanStack Start + Vite) ────────────────────────
 FROM node:22-alpine AS builder
 
 RUN corepack enable
 WORKDIR /monorepo
 
-# Copy manifests
+# Manifests first so layer cache survives source-only edits
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY packages/config/package.json  ./packages/config/
 COPY packages/api/package.json     ./packages/api/
 COPY packages/auth/package.json    ./packages/auth/
 COPY packages/db/package.json      ./packages/db/
 COPY packages/env/package.json     ./packages/env/
-COPY packages/ui/package.json      ./packages/ui/
 COPY apps/web/package.json         ./apps/web/
 
 RUN pnpm install --frozen-lockfile
 
-# Copy source
+# Sources
 COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
 
-# NEXT_PUBLIC_* vars must be available at build time
-ARG NEXT_PUBLIC_SERVER_URL=http://localhost:3000
-ENV NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL
-
+# Build TanStack Start → apps/web/.output (Nitro)
 RUN pnpm --filter web build
 
-# ── Stage 2: minimal standalone runtime ──────────────────────────────────────
+# ── Stage 2: minimal Node runtime ───────────────────────────────────────────
 FROM node:22-alpine AS runner
 
 WORKDIR /app
-
 ENV NODE_ENV=production
 ENV PORT=3001
+ENV HOST=0.0.0.0
 
-# next build --output standalone traces all runtime deps into .next/standalone
-COPY --from=builder /monorepo/apps/web/.next/standalone ./
-COPY --from=builder /monorepo/apps/web/.next/static      ./apps/web/.next/static
-COPY --from=builder /monorepo/apps/web/public            ./apps/web/public
+# Nitro bundles its own server.mjs + node_modules under .output/
+COPY --from=builder /monorepo/apps/web/.output ./
 
 EXPOSE 3001
 
-CMD ["node", "apps/web/server.js"]
+CMD ["node", "server/index.mjs"]

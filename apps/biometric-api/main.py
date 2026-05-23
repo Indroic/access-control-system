@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from src.features.biometrics.infrastructure.api import router as biometrics_router
@@ -23,6 +24,16 @@ async def lifespan(app: FastAPI):
 
 
 main_router = FastAPI(lifespan=lifespan)
+
+# CORS para llamadas directas desde el kiosco web (apps/web) al biometric-api.
+main_router.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3001", "http://127.0.0.1:3001"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 v1_router = APIRouter(prefix="/v1")
 v1_router.include_router(biometrics_router)
 

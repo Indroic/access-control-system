@@ -2,7 +2,7 @@ name: access-control-system
 
 services:
   postgres:
-    image: postgres
+    image: pgvector/pgvector:pg18
     container_name: access-control-system-postgres
     environment:
       POSTGRES_DB: access-control-system
@@ -12,11 +12,12 @@ services:
       - "5432:5432"
     volumes:
       - access-control-system_postgres_data:/var/lib/postgresql
+      - ../../docker/postgres-init.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d access-control-system"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
     restart: unless-stopped
 
 volumes:

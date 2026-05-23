@@ -8,6 +8,7 @@ from hexcore.config import LazyConfig
 from hexcore.infrastructure.repositories.orms.sqlalchemy import Base
 from hexcore.infrastructure.repositories.orms.sqlalchemy.utils import import_all_models
 import src.shared.infrastructure.database.models as models
+import src.features.audit.infrastructure.models  # noqa: F401 — register audit_log model
 
 import_all_models(models)
 
@@ -30,6 +31,16 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
+
+# Tables owned by HexCore — autogenerate must ignore everything else
+# (e.g. Better-Auth / Drizzle tables that share this database).
+_HEXCORE_TABLES = set(Base.metadata.tables.keys())
+
+
+def _include_object(object_, name, type_, reflected, compare_to):
+    if type_ == "table" and reflected and name not in _HEXCORE_TABLES:
+        return False
+    return True
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -55,6 +66,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=_include_object,
     )
 
     with context.begin_transaction():
@@ -75,7 +87,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=_include_object,
+        )
 
         with context.begin_transaction():
             context.run_migrations()

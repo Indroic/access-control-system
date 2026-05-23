@@ -25,11 +25,11 @@ class ProjectConfig(BaseSettings, ServerConfig):
 
     # Base de Datos (PostgreSQL + pgvector)
     sql_database_url: str = Field(
-        default="postgresql://postgres:postgres@localhost:5432/biometric_db",
+        default="postgresql://postgres:password@localhost:5432/access-control-system",
         validation_alias="SQL_DATABASE_URL",
     )
     async_sql_database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/biometric_db",
+        default="postgresql+asyncpg://postgres:password@localhost:5432/access-control-system",
         validation_alias="ASYNC_SQL_DATABASE_URL",
     )
 
@@ -59,6 +59,12 @@ class ProjectConfig(BaseSettings, ServerConfig):
     arduino_port: str = Field(
         default="/dev/ttyUSB0",
         alias="ARDUINO_PORT",
+    )
+
+    # Seguridad / API Interna
+    internal_api_key: str = Field(
+        default="change-me-to-a-safe-internal-secret-key-12345!!",
+        alias="INTERNAL_API_KEY",
     )
 
     @property

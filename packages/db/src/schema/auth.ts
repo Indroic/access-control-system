@@ -9,6 +9,10 @@ export const user = pgTable("user", {
   image: text("image"),
   faceRegistered: boolean("face_registered").default(false).notNull(),
   faceMeta: jsonb("face_meta").$type<Record<string, unknown> | null>().default(null),
+  role: text("role").default("user").notNull(),
+  banned: boolean("banned").default(false).notNull(),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -93,3 +97,19 @@ export const accountRelations = relations(account, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const oneTimeToken = pgTable(
+  "one_time_token",
+  {
+    id: text("id").primaryKey(),
+    token: text("token").notNull().unique(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    used: boolean("used").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("oneTimeToken_token_idx").on(table.token)],
+);
+

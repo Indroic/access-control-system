@@ -10,6 +10,7 @@ dependencies = [
     "insightface>=0.7.3",
     "numpy>=2.4.4",
     "onnxruntime>=1.25.1",
+    "opencv-python>=4.13.0.92",
     "opencv-python-headless>=4.13.0.92",
     "pgvector>=0.4.2",
     "pillow>=12.2.0",

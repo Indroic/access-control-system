@@ -212,7 +212,7 @@ class IdentifyUserUseCase(UseCase[IdentifyUserCommand, IdentificationResponse]):
 
         # Nota: Asegúrate de que el repo use Similitud de Coseno o Distancia Euclidiana
         # ajustada para vectores de 512 dimensiones.
-        match_result = await self.repo.get_by_vector(vector)
+        match_result = await self.repo.get_by_vector(vector, threshold=command.threshold)
 
         if not match_result:
             return IdentificationResponse(

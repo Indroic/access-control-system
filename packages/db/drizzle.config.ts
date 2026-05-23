@@ -3,12 +3,7 @@ import { defineConfig } from "drizzle-kit";
 
 dotenv.config();
 
-const dbUrl = process.env.DRIZZLE_DATABASE_URL || process.env.DATABASE_URL;
-if (!dbUrl) {
-  throw new Error(
-    "DRIZZLE_DATABASE_URL is not set. Set it in environment or create a matching .env file"
-  );
-}
+const dbUrl = process.env.DRIZZLE_DATABASE_URL || process.env.DATABASE_URL || "postgresql://postgres:password@localhost:5432/biometric_db";
 
 export default defineConfig({
   schema: "./src/schema",

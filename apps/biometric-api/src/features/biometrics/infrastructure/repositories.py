@@ -29,14 +29,20 @@ class UserFaceRepository(
     def not_found_exception(self):
         return FaceBiometricNotFound
 
-    async def get_by_vector(self, embedding: Sequence[float]) -> FaceBiometric:
+    async def get_by_vector(
+        self, embedding: Sequence[float], threshold: float = 0.45
+    ) -> FaceBiometric:
         """
-        Busca la biométrica más cercana a un vector dado usando la distancia L2.
-        Retorna la entidad mapeada o lanza una excepción si no hay registros.
+        Busca la biométrica más cercana a un vector dado usando la distancia de coseno y aplicando el umbral.
+        Retorna la entidad mapeada o lanza una excepción si no superan el umbral o no hay registros.
         """
+        # Distancia de coseno máxima permitida = 1.0 - similitud_mínima (threshold)
+        max_cosine_distance = 1.0 - threshold
+
         stmt = (
             select(self.model_cls)
-            .order_by(self.model_cls.embedding.l2_distance(embedding))
+            .where(self.model_cls.embedding.cosine_distance(embedding) <= max_cosine_distance)
+            .order_by(self.model_cls.embedding.cosine_distance(embedding))
             .limit(1)
         )
 

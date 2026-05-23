@@ -4,6 +4,7 @@ import { env } from "@access-control-system/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { faceBiometricsPlugin } from "./plugins/biometric";
+import { admin } from "better-auth/plugins/admin";
 
 export function createAuth() {
   const db = createDb();
@@ -30,6 +31,7 @@ export function createAuth() {
     },
     plugins: [
       faceBiometricsPlugin(),
+      admin(),
     ],
   });
 }

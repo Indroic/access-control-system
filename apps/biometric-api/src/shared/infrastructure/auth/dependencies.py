@@ -55,6 +55,15 @@ def get_current_user(
     if credentials is None:
         raise _credentials_exception()
 
+    # Si la credencial coincide con la clave secreta interna compartida, se concede rol de admin virtual.
+    if config.internal_api_key and credentials.credentials == config.internal_api_key:
+        return CurrentUser(
+            sub="system",
+            email="system@access-control-system",
+            name="System Integration",
+            role=Roles.ADMIN.value,
+        )
+
     try:
         signing_key = _jwks_client().get_signing_key_from_jwt(credentials.credentials)
         payload = decode(
