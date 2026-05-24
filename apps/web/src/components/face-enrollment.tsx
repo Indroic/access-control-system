@@ -77,9 +77,11 @@ export function FaceEnrollment({
 	const { state, handleDetection, reset } = useFaceCaptureFlow({
 		capture: camera.capture,
 		onComplete: async (frames) => {
-			await uploadFrame(userId, frames.front.imageBase64);
-			await uploadFrame(userId, frames.right.imageBase64);
-			await uploadFrame(userId, frames.left.imageBase64);
+			await Promise.all([
+				uploadFrame(userId, frames.front.imageBase64),
+				uploadFrame(userId, frames.right.imageBase64),
+				uploadFrame(userId, frames.left.imageBase64),
+			]);
 		},
 	});
 

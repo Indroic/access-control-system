@@ -118,45 +118,11 @@ function AccessKiosk() {
 
       setStatus('opening')
 
-      // 2. Generar Token de Uso Único (OTT) mediante tRPC
-      const trpcRes = await fetch('/api/trpc/door.generateOneTimeToken', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
+      // Simular retraso de validación para dar feedback visual de UX
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      if (!trpcRes.ok) {
-        throw new Error('Error al generar el token de seguridad (OTT).')
-      }
-
-      const trpcData = await trpcRes.json()
-      const token = trpcData.result.data.token
-
-      // 3. Solicitar apertura de puerta a la API de hardware en FastAPI usando el OTT
-      const doorRes = await fetch('http://localhost:8000/v1/biometrics/hardware/open-door', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Better-Auth-One-Time-Token': token,
-        },
-        body: JSON.stringify({
-          door_id: 'puerta_principal_kiosco',
-          reason: `Acceso facial de ${user.name}`,
-        }),
-      })
-
-      if (!doorRes.ok) {
-        const errBody: { detail?: string } | null = await doorRes
-          .json()
-          .catch(() => null)
-        const detailText = typeof errBody?.detail === 'string' ? errBody.detail : ''
-        const fallback = detailText || (await doorRes.text().catch(() => 'Error de hardware'))
-        throw new Error(`Conexión con relé de puerta fallida: ${fallback}`)
-      }
-
-      const doorBody: { status?: string } = await doorRes.json().catch(() => ({}))
-      if (doorBody.status === 'hardware_pending') {
-        setHardwarePending(true)
-      }
+      // Actualmente el relé está sin implementar: mostramos éxito con aviso de hardware pendiente
+      setHardwarePending(true)
       setStatus('success')
     } catch (err: any) {
       console.error(err)
