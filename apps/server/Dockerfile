@@ -23,7 +23,7 @@ COPY apps/server/ ./apps/server/
 RUN pnpm --filter server build
 
 # Create a production-only node_modules tree for the server package
-RUN pnpm --filter server deploy --prod /deploy
+RUN pnpm --filter server deploy --prod --legacy /deploy
 
 # ── Stage 2: minimal runtime ──────────────────────────────────────────────────
 FROM node:22-alpine AS runner
