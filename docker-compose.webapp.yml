@@ -14,7 +14,7 @@ services:
       ADMIN_SETUP_SECRET: ${ADMIN_SETUP_SECRET:-super-secret-admin-setup-key-123456}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-change-me-to-a-safe-internal-secret-key-12345!!}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -30,7 +30,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: ${PORT:-3001}
-      NEXT_PUBLIC_SERVER_URL: http://server:3000
+      NEXT_PUBLIC_SERVER_URL: ""
     ports:
       - "3001:3001"
     depends_on:
