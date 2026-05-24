@@ -37,10 +37,11 @@ ENV HOST=0.0.0.0
 COPY --from=builder /deploy/package.json ./
 COPY --from=builder /deploy/node_modules ./node_modules
 
-# Copiamos la build generada
+# Copiamos la build generada y los archivos de configuración/código fuente requeridos por Vite en producción
 COPY --from=builder /monorepo/apps/web/dist ./dist
 COPY --from=builder /monorepo/apps/web/vite.config.ts ./vite.config.ts
 COPY --from=builder /monorepo/apps/web/tsconfig.json ./tsconfig.json
+COPY --from=builder /monorepo/apps/web/src ./src
 
 EXPOSE 3001
 
