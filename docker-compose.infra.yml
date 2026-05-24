@@ -1,0 +1,30 @@
+name: acs-infra
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: acs-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-access-control-system}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-access-control-system}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - dokploy-network
+
+volumes:
+  postgres_data:
+
+networks:
+  dokploy-network:
+    external: true

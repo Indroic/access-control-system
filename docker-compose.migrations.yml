@@ -1,0 +1,54 @@
+name: acs-migrations
+
+services:
+  migrate:
+    image: node:22-alpine
+    container_name: acs-migrate
+    working_dir: /monorepo
+    command: >
+      sh -c "
+        corepack enable &&
+        pnpm install --frozen-lockfile &&
+        pnpm --filter @access-control-system/db db:push
+      "
+    environment:
+      CI: "true"
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:password@postgres:5432/access-control-system}
+    volumes:
+      - .:/monorepo
+      - migrate_node_modules:/monorepo/node_modules
+    restart: "no"
+    networks:
+      - dokploy-network
+
+  biometric-migrate:
+    image: python:3.14
+    container_name: acs-biometric-migrate
+    working_dir: /app
+    command: >
+      sh -c "
+        pip install uv --quiet --disable-pip-version-check &&
+        uv sync --frozen &&
+        .venv/bin/alembic upgrade head
+      "
+    environment:
+      SQL_DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:password@postgres:5432/access-control-system}
+      ASYNC_SQL_DATABASE_URL: ${ASYNC_DATABASE_URL:-postgresql+asyncpg://postgres:password@postgres:5432/access-control-system}
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./apps/biometric-api:/app
+      - biometric_venv:/app/.venv
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - dokploy-network
+
+volumes:
+  migrate_node_modules:
+  biometric_venv:
+
+networks:
+  dokploy-network:
+    external: true
