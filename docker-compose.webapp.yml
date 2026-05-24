@@ -13,6 +13,8 @@ services:
       BIOMETRIC_API_URL: http://biometric-api:8000
       ADMIN_SETUP_SECRET: ${ADMIN_SETUP_SECRET:-super-secret-admin-setup-key-123456}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-change-me-to-a-safe-internal-secret-key-12345!!}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://biometric.indroic.dev}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://biometric.indroic.dev/api/auth}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ || exit 1"]
       interval: 15s
