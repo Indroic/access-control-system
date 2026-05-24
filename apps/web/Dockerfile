@@ -39,6 +39,8 @@ COPY --from=builder /deploy/node_modules ./node_modules
 
 # Copiamos la build generada
 COPY --from=builder /monorepo/apps/web/dist ./dist
+COPY --from=builder /monorepo/apps/web/vite.config.ts ./vite.config.ts
+COPY --from=builder /monorepo/apps/web/tsconfig.json ./tsconfig.json
 
 EXPOSE 3001
 

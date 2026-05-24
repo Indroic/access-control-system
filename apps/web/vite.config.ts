@@ -12,6 +12,7 @@ const config = defineConfig({
   server: {
     port: 3001,
     host: true,
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: 'http://server:3000',
@@ -26,7 +27,7 @@ const config = defineConfig({
   preview: {
     port: 3001,
     host: true,
-    allowedHosts: ['biometric.indroic.dev', 'localhost'],
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: 'http://server:3000',
