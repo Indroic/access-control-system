@@ -19,8 +19,11 @@ RUN pnpm install --frozen-lockfile
 COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
 
-# Build TanStack Start → apps/web/.output (Nitro)
+# Build TanStack Start -> apps/web/dist
 RUN pnpm --filter web build
+
+# Create a node_modules tree for the web package (including dev deps for vite preview)
+RUN pnpm --filter web deploy --legacy /deploy
 
 # ── Stage 2: minimal Node runtime ───────────────────────────────────────────
 FROM node:22-alpine AS runner
@@ -30,9 +33,13 @@ ENV NODE_ENV=production
 ENV PORT=3001
 ENV HOST=0.0.0.0
 
-# Nitro bundles its own server.mjs + node_modules under .output/
-COPY --from=builder /monorepo/apps/web/.output ./
+# Copiamos package.json y dependencias (incluye vite)
+COPY --from=builder /deploy/package.json ./
+COPY --from=builder /deploy/node_modules ./node_modules
+
+# Copiamos la build generada
+COPY --from=builder /monorepo/apps/web/dist ./dist
 
 EXPOSE 3001
 
-CMD ["node", "server/index.mjs"]
+CMD ["npx", "vite", "preview", "--host", "0.0.0.0", "--port", "3001"]
