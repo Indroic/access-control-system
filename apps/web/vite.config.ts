@@ -26,6 +26,7 @@ const config = defineConfig({
   preview: {
     port: 3001,
     host: true,
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: 'http://server:3000',
