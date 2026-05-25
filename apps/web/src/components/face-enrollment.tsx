@@ -74,6 +74,7 @@ export function FaceEnrollment({
 }: FaceEnrollmentProps) {
 	const [debug, setDebug] = useState<PoseDetection | null>(null);
 	const camera = useCamera({ facingMode: "user", autoStart: true });
+	
 	const { state, handleDetection, reset } = useFaceCaptureFlow({
 		capture: camera.capture,
 		onComplete: async (frames) => {

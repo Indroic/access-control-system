@@ -103,6 +103,7 @@ export function useFaceCaptureFlow({
 	const framesRef = useRef<Partial<Record<CaptureStep, CaptureResult>>>({});
 	const lockedRef = useRef(false);
 	const finishingRef = useRef(false);
+	const terminalRef = useRef(false);
 
 	const reset = useCallback(() => {
 		stepRef.current = "front";
@@ -111,6 +112,7 @@ export function useFaceCaptureFlow({
 		framesRef.current = {};
 		lockedRef.current = false;
 		finishingRef.current = false;
+		terminalRef.current = false;
 		setState({
 			phase: "aligning",
 			step: "front",
@@ -130,7 +132,9 @@ export function useFaceCaptureFlow({
 		holdSinceRef.current = null;
 
 		if (!next) {
+			terminalRef.current = true;
 			finishingRef.current = true;
+			lockedRef.current = true;
 			setState((s) => ({
 				...s,
 				phase: "uploading",
@@ -150,7 +154,6 @@ export function useFaceCaptureFlow({
 				}));
 			} finally {
 				finishingRef.current = false;
-				lockedRef.current = false;
 			}
 			return;
 		}
@@ -172,7 +175,7 @@ export function useFaceCaptureFlow({
 
 	const handleDetection = useCallback(
 		(det: PoseDetection) => {
-			if (lockedRef.current || finishingRef.current) return;
+			if (terminalRef.current || lockedRef.current || finishingRef.current) return;
 
 			const step = stepRef.current;
 			const target = POSE_TARGETS[step];

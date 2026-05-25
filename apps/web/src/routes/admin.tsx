@@ -133,7 +133,7 @@ function AdminConsole() {
       const successMsg = `Empleado ${regName} registrado exitosamente. Ahora puedes capturar su rostro.`
       setRegSuccess(successMsg)
       toast.success(successMsg)
-      
+
       setRegName('')
       setRegEmail('')
       setRegPassword('')
@@ -206,7 +206,6 @@ function AdminConsole() {
 
   // Tras enrolamiento exitoso, refrescar listas
   function handleFaceRegistrationSuccess() {
-    setSelectedUserForFace(null)
     refetchEmployees()
     refetchAuditLogs()
     toast.success('Biometría registrada correctamente.')
@@ -403,6 +402,8 @@ function AdminConsole() {
                                     onPress={() => startFaceRegistration(emp)}
                                     variant="secondary"
                                     size="sm"
+                                    isDisabled={emp.faceRegistered}
+                                    title={emp.faceRegistered ? 'Biometría ya registrada' : 'Registrar biometría'}
                                   >
                                     <Camera size={14} />
                                     Registrar Biometría
