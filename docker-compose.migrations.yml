@@ -22,26 +22,24 @@ services:
       - dokploy-network
 
   biometric-migrate:
-    image: python:3.14
+    build:
+      context: .
+      dockerfile: apps/biometric-api/Dockerfile
     container_name: acs-biometric-migrate
-    working_dir: /app
-    command: >
-      sh -c "
-        apt-get update -qq && apt-get install -y --no-install-recommends build-essential cmake libopenblas-dev liblapack-dev && rm -rf /var/lib/apt/lists/* &&
-        pip install --quiet --no-cache-dir uv &&
-        uv sync --frozen &&
-        uv run alembic upgrade head
-      "
+    restart: "no"
     environment:
       SQL_DATABASE_URL: postgresql://postgres:password@postgres:5432/access-control-system
       ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/access-control-system
       PYTHONUNBUFFERED: "1"
-    volumes:
-      - ./apps/biometric-api:/app
+    command:
+      [
+        "/app/.venv/bin/alembic",
+        "-c", "/app/alembic.ini",
+        "upgrade", "head"
+      ]
     depends_on:
       migrate:
         condition: service_completed_successfully
-    restart: "no"
     networks:
       - dokploy-network
 
@@ -51,3 +49,4 @@ volumes:
 networks:
   dokploy-network:
     external: true
+    name: dokploy-network
