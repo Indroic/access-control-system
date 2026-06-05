@@ -9,6 +9,7 @@ from src.features.biometrics.application.use_cases import (
     WarmupCommand,
 )
 
+from .config import config
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,6 +18,10 @@ async def lifespan(app: FastAPI):
     use_case = WarmupBiometricsUseCase()
     await use_case.execute(WarmupCommand())
     print("Modelos cargados exitosamente.")
+    
+    print("Biometric API está lista para recibir solicitudes.")
+    print(config.sql_database_url)  # Imprime la URL de la base de datos para verificar que se ha cargado correctamente
+    print(config.async_sql_database_url)
 
     yield  # Aquí es donde la aplicación "vive"
 
