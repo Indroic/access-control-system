@@ -2,6 +2,7 @@ from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
+from src.features.audit.infrastructure.api import router as audit_router
 from src.features.biometrics.infrastructure.api import router as biometrics_router
 from src.features.biometrics.application.use_cases import (
     WarmupBiometricsUseCase,
@@ -36,6 +37,7 @@ main_router.add_middleware(
 
 v1_router = APIRouter(prefix="/v1")
 v1_router.include_router(biometrics_router)
+v1_router.include_router(audit_router)
 
 main_router.include_router(v1_router)
 app = main_router
