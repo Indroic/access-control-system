@@ -2,14 +2,18 @@ from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
+# 1. Configuración de HexCore (Debe inicializarse ANTES de cualquier router)
+from config import config
+from hexcore.config import LazyConfig
+LazyConfig._imported_config = config
+
+# 2. Ahora sí podemos importar los routers que dependen de hexcore/sqlalchemy
 from src.features.audit.infrastructure.api import router as audit_router
 from src.features.biometrics.infrastructure.api import router as biometrics_router
 from src.features.biometrics.application.use_cases import (
     WarmupBiometricsUseCase,
     WarmupCommand,
 )
-
-from config import config
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

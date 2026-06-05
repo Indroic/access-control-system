@@ -73,6 +73,7 @@ services:
     environment:
       SQL_DATABASE_URL: postgresql://postgres:password@postgres:5432/access-control-system
       ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/access-control-system
+      HEXCORE_CONFIG_MODULE: "config"
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./apps/biometric-api:/app
@@ -138,6 +139,7 @@ services:
     environment:
       SQL_DATABASE_URL: *database-url
       ASYNC_SQL_DATABASE_URL: *async-database-url
+      HEXCORE_CONFIG_MODULE: "config"
       BETTER_AUTH_URL: http://server:3000/api/auth
       BETTER_AUTH_ISSUER: *public-server-url
       BETTER_AUTH_AUDIENCE: *public-server-url
