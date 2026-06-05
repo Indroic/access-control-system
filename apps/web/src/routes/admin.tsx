@@ -403,10 +403,9 @@ function AdminConsole() {
                                     variant="secondary"
                                     size="sm"
                                     isDisabled={emp.faceRegistered}
-                                    title={emp.faceRegistered ? 'Biometría ya registrada' : 'Registrar biometría'}
                                   >
                                     <Camera size={14} />
-                                    Registrar Biometría
+                                    {emp.faceRegistered ? 'Biometría ya registrada' : 'Registrar biometría'}
                                   </Button>
                                   <Button
                                     onPress={() => setUserToDelete(emp)}
