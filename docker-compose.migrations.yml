@@ -28,8 +28,8 @@ services:
     command: >
       sh -c "
         pip install --quiet --no-cache-dir uv &&
-        uv pip install --system alembic 'sqlalchemy[asyncio]' psycopg2-binary hexcore pgvector pydantic-settings &&
-        alembic upgrade head
+        uv sync --frozen &&
+        uv run alembic upgrade head
       "
     environment:
       SQL_DATABASE_URL: postgresql://postgres:password@postgres:5432/access-control-system
