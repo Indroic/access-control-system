@@ -22,14 +22,20 @@ services:
       - dokploy-network
 
   biometric-migrate:
-    image: python:3.14
+    image: python:3.14-slim
     container_name: acs-biometric-migrate
     working_dir: /app
     command: >
       sh -c "
-        pip install uv --quiet --disable-pip-version-check &&
-        uv sync --frozen &&
-        .venv/bin/alembic upgrade head
+        pip install --quiet --no-cache-dir uv &&
+        uv pip install --system
+          alembic
+          'sqlalchemy[asyncio]'
+          psycopg2-binary
+          hexcore
+          pgvector
+          pydantic-settings &&
+        alembic upgrade head
       "
     environment:
       SQL_DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:password@postgres:5432/access-control-system}
@@ -37,7 +43,6 @@ services:
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./apps/biometric-api:/app
-      - biometric_venv:/app/.venv
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -47,7 +52,6 @@ services:
 
 volumes:
   migrate_node_modules:
-  biometric_venv:
 
 networks:
   dokploy-network:
