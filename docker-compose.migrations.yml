@@ -38,8 +38,8 @@ services:
         alembic upgrade head
       "
     environment:
-      SQL_DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:password@postgres:5432/access-control-system}
-      ASYNC_SQL_DATABASE_URL: ${ASYNC_DATABASE_URL:-postgresql+asyncpg://postgres:password@postgres:5432/access-control-system}
+      SQL_DATABASE_URL: postgresql://postgres:password@postgres:5432/access-control-system
+      ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/access-control-system
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./apps/biometric-api:/app

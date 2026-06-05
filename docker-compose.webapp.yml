@@ -48,9 +48,11 @@ services:
       dockerfile: apps/biometric-api/Dockerfile
     container_name: acs-biometric
     environment:
-      SQL_DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:password@postgres:5432/access-control-system}
-      ASYNC_SQL_DATABASE_URL: ${ASYNC_DATABASE_URL:-postgresql+asyncpg://postgres:password@postgres:5432/access-control-system}
+      SQL_DATABASE_URL: postgresql://postgres:password@postgres:5432/access-control-system
+      ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/access-control-system
       BETTER_AUTH_URL: http://server:3000/api/auth
+      BETTER_AUTH_ISSUER: ${BETTER_AUTH_URL:-https://biometric.indroic.dev/api/auth}
+      BETTER_AUTH_AUDIENCE: ${BETTER_AUTH_URL:-https://biometric.indroic.dev/api/auth}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-change-me-to-a-safe-internal-secret-key-12345!!}
     volumes:
       - insightface_models:/root/.insightface
