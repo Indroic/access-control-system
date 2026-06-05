@@ -9,7 +9,7 @@ from src.features.biometrics.application.use_cases import (
     WarmupCommand,
 )
 
-from .config import config
+from config import config
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
