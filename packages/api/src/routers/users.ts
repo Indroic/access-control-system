@@ -28,7 +28,7 @@ export const usersRouter = router({
     .input(z.object({ userId: z.string() }))
     .mutation(async ({ input }) => {
       const targetUser = await db.select({ role: user.role }).from(user).where(eq(user.id, input.userId)).limit(1);
-      if (targetUser.length > 0 && targetUser[0].role === "admin") {
+      if (targetUser.length > 0 && targetUser[0]?.role === "admin") {
         throw new Error("No está permitido eliminar a un administrador del sistema.");
       }
       await db.delete(user).where(eq(user.id, input.userId));

@@ -1,4 +1,4 @@
-import { env } from "@access-control-system/env";
+import { env } from "@access-control-system/env/server";
 
 import { protectedProcedure, router } from "../index";
 
