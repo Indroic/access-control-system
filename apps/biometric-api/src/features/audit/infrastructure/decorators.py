@@ -86,6 +86,9 @@ def audit_endpoint(
                 if session is not None and hasattr(session, "user_id"):
                     user_id = session.user_id
 
+            if user_id == "system" and "performed_by" in kwargs and kwargs["performed_by"]:
+                user_id = kwargs["performed_by"]
+
             # Contexto HTTP
             ip: str | None = None
             ua: str | None = None

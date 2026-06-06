@@ -9,7 +9,7 @@ export const faceBiometricsClientPlugin = () =>
         $InferServerPlugin: {} as ReturnType<typeof faceBiometricsPlugin>,
         getActions: ($fetch) => ({
             registerFace: async (
-                data: { imageBase64: string; mimeType?: string; userId: string },
+                data: { imageBase64: string; mimeType?: string; userId: string; performedBy?: string },
                 fetchOptions?: BetterFetchOption,
             ) =>
                 $fetch("/face-biometrics/register-face", {

@@ -26,6 +26,7 @@ const imagePayloadSchema = z.object({
 
 const registerFaceSchema = imagePayloadSchema.extend({
     userId: z.string().min(1),
+    performedBy: z.string().optional(),
 });
 
 const authenticateFaceSchema = imagePayloadSchema;
@@ -71,6 +72,9 @@ async function registerFaceHandler(ctx: GenericEndpointContext) {
         base64ToBlob(body.imageBase64, body.mimeType),
         "face.jpg",
     );
+    if (body.performedBy) {
+        formData.append("performed_by", body.performedBy);
+    }
 
     const result = await callBiometricApi<BiometricRegisterResponse>("/v1/biometrics/register", {
         body: formData,
@@ -78,11 +82,11 @@ async function registerFaceHandler(ctx: GenericEndpointContext) {
 
     const updatedUser = await ctx.context.internalAdapter.updateUser(body.userId, {
         faceRegistered: true,
-        faceMeta: {
+        faceMeta: JSON.stringify({
             registeredAt: new Date().toISOString(),
             source: "biometric-api",
             biometricResponse: result,
-        },
+        }),
     });
 
     return ctx.json({
@@ -174,6 +178,14 @@ async function searchUserByFaceHandler(ctx: GenericEndpointContext) {
 export const faceBiometricsPlugin = () =>
     ({
         id: "face-biometrics",
+        schema: {
+            user: {
+                fields: {
+                    faceRegistered: { type: "boolean", required: false, defaultValue: false },
+                    faceMeta: { type: "string", required: false },
+                }
+            }
+        },
         endpoints: {
             registerFace: createAuthEndpoint(
                 "/face-biometrics/register-face",

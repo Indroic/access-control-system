@@ -77,6 +77,37 @@ export function createAuth() {
         }
       }),
     },
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user) => {
+            void fetch(`${env.BIOMETRIC_API_URL}/v1/audit/login-event`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.INTERNAL_API_KEY}` },
+              body: JSON.stringify({ action: "user_created", user_id: user.id, details: { email: user.email, name: user.name } }),
+            }).catch(console.error);
+          }
+        },
+        update: {
+          after: async (user) => {
+            void fetch(`${env.BIOMETRIC_API_URL}/v1/audit/login-event`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.INTERNAL_API_KEY}` },
+              body: JSON.stringify({ action: "user_updated", user_id: user.id, details: { email: user.email, name: user.name, faceRegistered: user.faceRegistered } }),
+            }).catch(console.error);
+          }
+        },
+        delete: {
+          after: async (user) => {
+            void fetch(`${env.BIOMETRIC_API_URL}/v1/audit/login-event`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.INTERNAL_API_KEY}` },
+              body: JSON.stringify({ action: "user_deleted", user_id: user.id, details: { email: user.email } }),
+            }).catch(console.error);
+          }
+        }
+      }
+    }
   });
 }
 

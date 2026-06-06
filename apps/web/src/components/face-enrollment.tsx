@@ -19,6 +19,7 @@ import {
 
 export type FaceEnrollmentProps = {
 	userId: string;
+	performedBy?: string;
 	onSuccess: () => void;
 	onCancel: () => void;
 };
@@ -55,11 +56,12 @@ function issueMessage(issue: string, step: CaptureStep): string {
 async function uploadFrame(
 	userId: string,
 	imageBase64: string,
+	performedBy?: string,
 ): Promise<void> {
 	const res = await fetch("/api/auth/face-biometrics/register-face", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ userId, imageBase64, mimeType: "image/jpeg" }),
+		body: JSON.stringify({ userId, imageBase64, mimeType: "image/jpeg", performedBy }),
 	});
 	if (!res.ok) {
 		const data = (await res.json().catch(() => ({}))) as { message?: string };
@@ -69,6 +71,7 @@ async function uploadFrame(
 
 export function FaceEnrollment({
 	userId,
+	performedBy,
 	onSuccess,
 	onCancel,
 }: FaceEnrollmentProps) {
@@ -79,9 +82,9 @@ export function FaceEnrollment({
 		capture: camera.capture,
 		onComplete: async (frames) => {
 			await Promise.all([
-				uploadFrame(userId, frames.front.imageBase64),
-				uploadFrame(userId, frames.right.imageBase64),
-				uploadFrame(userId, frames.left.imageBase64),
+				uploadFrame(userId, frames.front.imageBase64, performedBy),
+				uploadFrame(userId, frames.right.imageBase64, performedBy),
+				uploadFrame(userId, frames.left.imageBase64, performedBy),
 			]);
 		},
 	});

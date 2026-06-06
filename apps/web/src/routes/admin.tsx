@@ -510,7 +510,7 @@ function AdminConsole() {
                         {auditLogs.map((log) => (
                           <Table.Row key={log.id} id={log.id}>
                             <Table.Cell className="text-xs text-muted py-3.5">
-                              {new Date(log.createdAt).toLocaleString('es-ES')}
+                              {new Date(log.created_at).toLocaleString('es-ES')}
                             </Table.Cell>
                             <Table.Cell className="py-3.5">{getActionBadge(log.action)}</Table.Cell>
                             <Table.Cell className="font-semibold text-foreground py-3.5">
@@ -573,6 +573,7 @@ function AdminConsole() {
                   <FaceEnrollment
                     key={selectedUserForFace.id}
                     userId={selectedUserForFace.id}
+                    performedBy={sessionData?.user?.name || sessionData?.user?.id}
                     onSuccess={handleFaceRegistrationSuccess}
                     onCancel={closeFaceRegistration}
                   />

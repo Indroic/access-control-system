@@ -71,6 +71,7 @@ async def get_open_door_use_case() -> OpenDoorUseCase:
 async def register_user_biometrics(
     user_id: str = Form(...),
     files: List[UploadFile] = File(...),
+    performed_by: str | None = Form(None),
     use_case: RegisterBiometricsUseCase = Depends(get_register_use_case),
     user: CurrentUser = Depends(require_admin),
 ):
