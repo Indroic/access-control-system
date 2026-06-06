@@ -10,6 +10,7 @@ import {
   Clock,
   ShieldCheck,
   RefreshCw,
+  LogOut,
 } from 'lucide-react'
 import { Card, Button, TextField, Label, Input, Tabs, Table, Modal, Alert, toast } from '@heroui/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -60,6 +61,17 @@ function AdminConsole() {
       navigate({ to: '/' })
     }
   }, [sessionError, navigate])
+
+  // Función para cerrar sesión
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/sign-out', { method: 'POST' })
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err)
+    } finally {
+      window.location.href = '/'
+    }
+  }
 
   // Query: Obtener lista de empleados
   const { data: employees = [], isLoading: employeesLoading, refetch: refetchEmployees } = useQuery({
@@ -250,17 +262,27 @@ function AdminConsole() {
               Gestión centralizada de personal biométrico y logs de accesos del hardware.
             </p>
           </div>
-          <Button
-            onPress={() => {
-              refetchEmployees()
-              refetchAuditLogs()
-            }}
-            variant="secondary"
-            className="flex items-center gap-2 text-sm font-semibold cursor-pointer"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            Actualizar Datos
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onPress={() => {
+                refetchEmployees()
+                refetchAuditLogs()
+              }}
+              variant="secondary"
+              className="flex items-center gap-2 text-sm font-semibold cursor-pointer"
+            >
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              Actualizar Datos
+            </Button>
+            <Button
+              onPress={handleLogout}
+              variant="danger"
+              className="flex items-center gap-2 text-sm font-semibold cursor-pointer"
+            >
+              <LogOut size={16} />
+              Cerrar Sesión
+            </Button>
+          </div>
         </div>
 
         {/* Selector de pestañas */}
