@@ -68,6 +68,7 @@ def audit_endpoint(
         @functools.wraps(fn)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             _audit_uc: LogBiometricEventUseCase = kwargs.pop("_audit_uc")
+            print(f"Audit decorator: action='{action}', user={kwargs.get('user')}, auth_session={kwargs.get('auth_session')}")
 
             # Extraer request (quitarlo de kwargs si fue añadido por el decorador)
             if not has_request:
@@ -132,5 +133,7 @@ def audit_endpoint(
 
         wrapper.__signature__ = original_sig.replace(parameters=new_params)
         return wrapper
+
+    print(f"Decorating {fn.__name__} with audit_endpoint (action='{action}')")
 
     return decorator
