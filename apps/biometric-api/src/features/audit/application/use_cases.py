@@ -33,3 +33,12 @@ class LogBiometricEventUseCase(UseCase[LogBiometricEventCommand, AuditLogRespons
             user_agent=entity.user_agent,
             details=entity.details,
         )
+
+
+from hexcore.application.dtos.query import QueryRequestDTO, QueryResponseDTO
+from hexcore.application.use_cases.query import QueryEntitiesUseCase
+
+class ListAuditLogsUseCase(QueryEntitiesUseCase[BiometricAuditLog]):
+    async def execute(self, command: QueryRequestDTO) -> QueryResponseDTO:
+        return await super().execute(command)
+
