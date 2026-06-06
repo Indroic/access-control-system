@@ -123,6 +123,8 @@ services:
       NODE_ENV: production
       PORT: 3001
       NEXT_PUBLIC_SERVER_URL: *public-server-url
+      INTERNAL_API_KEY: change-me-to-a-safe-internal-secret-key-12345!!
+      BIOMETRIC_API_URL: http://biometric-api:8000
     ports:
       - "3001:3001"
     depends_on:

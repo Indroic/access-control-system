@@ -22,4 +22,7 @@ RUN pnpm install --frozen-lockfile
 
 EXPOSE 3001
 
+ENV INTERNAL_API_KEY=change-me-to-a-safe-internal-secret-key-12345!!
+ENV BIOMETRIC_API_URL=http://localhost:8000
+
 CMD ["pnpm", "--filter", "web", "dev"]

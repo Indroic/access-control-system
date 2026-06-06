@@ -6,9 +6,11 @@ from pydantic import BaseModel
 
 from config import config
 
-from ..application.dtos import LogBiometricEventCommand
+from ..application.dtos import LogBiometricEventCommand, AuditLogResponse
 from ..application.use_cases import LogBiometricEventUseCase
+from ..domain.entities import BiometricAuditLog
 from .dependencies import get_audit_use_case
+from hexcore.infrastructure.api.utils import register_query_endpoint
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
@@ -56,3 +58,12 @@ async def log_login_event(
         )
     )
     return {"status": "logged"}
+
+
+register_query_endpoint(
+    router=router,
+    path="",
+    entity_cls=BiometricAuditLog,
+    dto_cls=AuditLogResponse,
+    dependencies=[Depends(_require_internal_key)],
+)
