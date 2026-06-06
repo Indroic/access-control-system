@@ -9,8 +9,10 @@ from config import config
 from ..application.dtos import LogBiometricEventCommand, AuditLogResponse
 from ..application.use_cases import LogBiometricEventUseCase
 from ..domain.entities import BiometricAuditLog
-from .dependencies import get_audit_use_case
-from hexcore.infrastructure.api.utils import register_query_endpoint
+from .dependencies import get_audit_use_case, make_audit_repository
+from hexcore.infrastructure.api.utils import build_query_endpoint
+from hexcore.application.use_cases.query import QueryEntitiesUseCase
+from .repositories import BiometricAuditLogRepository
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
@@ -60,10 +62,15 @@ async def log_login_event(
     return {"status": "logged"}
 
 
-register_query_endpoint(
-    router=router,
+def get_query_audit_use_case(
+    repo: BiometricAuditLogRepository = Depends(make_audit_repository)
+) -> QueryEntitiesUseCase:
+    return QueryEntitiesUseCase(repository=repo)
+
+
+router.add_api_route(
     path="",
-    entity_cls=BiometricAuditLog,
-    dto_cls=AuditLogResponse,
+    endpoint=build_query_endpoint(use_case_factory=get_query_audit_use_case),
+    methods=["GET"],
     dependencies=[Depends(_require_internal_key)],
 )
