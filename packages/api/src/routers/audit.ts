@@ -5,7 +5,7 @@ import { protectedProcedure, router } from "../index";
 export const auditRouter = router({
   list: protectedProcedure.query(async () => {
     try {
-      const response = await fetch(`${env.BIOMETRIC_API_URL}/audit/`, {
+      const response = await fetch(`${env.BIOMETRIC_API_URL}/v1/audit`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${env.INTERNAL_API_KEY}`,
