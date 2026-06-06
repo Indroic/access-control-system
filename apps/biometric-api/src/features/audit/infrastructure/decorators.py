@@ -134,6 +134,4 @@ def audit_endpoint(
         wrapper.__signature__ = original_sig.replace(parameters=new_params)
         return wrapper
 
-    print(f"Decorating {fn.__name__} with audit_endpoint (action='{action}')")
-
     return decorator
