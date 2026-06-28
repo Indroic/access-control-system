@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from src.features.audit.application.dtos import LogBiometricEventCommand
-
 
 class ILoginHistoryReader(ABC):
     """Puerto: lee las marcas de tiempo de logins concedidos de un usuario."""
@@ -16,5 +14,5 @@ class IAuditEventLogger(ABC):
     """Puerto: registra un evento de auditoría."""
 
     @abstractmethod
-    async def execute(self, command: LogBiometricEventCommand) -> object:
+    async def execute(self, command: object) -> object:
         raise NotImplementedError

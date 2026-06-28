@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.features.anomaly.application.dtos import EvaluateLoginAnomalyCommand
 from src.features.anomaly.application.use_cases import EvaluateLoginAnomalyUseCase
+from src.features.anomaly.domain.ports import IAuditEventLogger, ILoginHistoryReader
 from src.features.anomaly.domain.services import LoginTimePatternService
 
 _MORNING_HOURS = [8.5, 8.7, 8.9, 9.0, 9.1, 9.2, 9.3, 8.8, 9.0, 9.1] * 2
@@ -13,7 +14,7 @@ def _dt(hour: float):
     return datetime(2026, 1, 1, h, m, 0)
 
 
-class FakeHistoryReader:
+class FakeHistoryReader(ILoginHistoryReader):
     def __init__(self, hours):
         self._times = [_dt(h) for h in hours]
         self.calls = []
@@ -23,7 +24,7 @@ class FakeHistoryReader:
         return list(self._times)
 
 
-class FakeAuditLogger:
+class FakeAuditLogger(IAuditEventLogger):
     def __init__(self):
         self.commands = []
 
@@ -59,6 +60,8 @@ async def test_suspicious_login_logs_audit_event():
     assert cmd.details["reason"] == "unusual_hour"
     assert cmd.details["sample_size"] == 20
     assert "score" in cmd.details and "mean_hour" in cmd.details
+    assert reader.calls[0][0] == "u1"
+    assert reader.calls[0][1] == _dt(3.0) - timedelta(days=90)
 
 
 async def test_normal_login_does_not_log():
