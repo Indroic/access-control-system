@@ -10,24 +10,14 @@ x-public-server-url: &public-server-url http://localhost:3000
 services:
 
   # ── Drizzle push (Better-Auth schema) — runs once, exits ──────────────────
-  migrate:
-    image: node:22-alpine
-    container_name: acs-migrate
-    working_dir: /monorepo
-    command: >
-      sh -c "
-        corepack enable &&
-        pnpm install --frozen-lockfile &&
-        pnpm --filter @access-control-system/db db:push
-      "
-    environment:
-      CI: "true"
-      DATABASE_URL: *database-url
-    volumes:
-      - .:/monorepo
-      - migrate_node_modules:/monorepo/node_modules
+  biometric-api-migrator:
+    build:
+      context: .
+      dockerfile: apps/biometric-api/Dockerfile
     restart: "no"
-    
+    command: ["sh", "./scripts/migrate.sh"]
+    environment:
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL must be set}
     networks:
       - dokploy-network
 
