@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.136.1",
-    "hexcore>=2.0.3",
+    "hexcore==2.0.3",
     "insightface>=0.7.3",
     "numpy>=2.4.4",
     "onnxruntime>=1.25.1",
