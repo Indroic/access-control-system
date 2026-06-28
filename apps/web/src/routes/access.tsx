@@ -5,15 +5,35 @@ import { Card, Button } from '@heroui/react'
 
 export const Route = createFileRoute('/access')({ component: AccessKiosk })
 
+type KioskStatus =
+  | 'loading-camera'
+  | 'idle'
+  | 'capturing'
+  | 'matching'
+  | 'opening'
+  | 'success'
+  | 'failed'
+
+// Etiqueta única por estado: renderizar un solo nodo de texto (en vez de varios
+// hermanos condicionales) evita errores de reconciliación de React del tipo
+// "insertBefore ... is not a child of this node".
+const STATUS_LABELS: Record<KioskStatus, string> = {
+  'loading-camera': 'Iniciando Cámara...',
+  idle: 'Kiosco Activo y Listo',
+  capturing: 'Capturando...',
+  matching: 'Emparejando...',
+  opening: 'Concediendo acceso...',
+  success: 'Puerta Abierta',
+  failed: 'Error de Lectura',
+}
+
 function AccessKiosk() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
 
-  // Estados del Kiosco: 'loading-camera' | 'idle' | 'capturing' | 'matching' | 'opening' | 'success' | 'failed'
-  const [status, setStatus] = useState<
-    'loading-camera' | 'idle' | 'capturing' | 'matching' | 'opening' | 'success' | 'failed'
-  >('loading-camera')
+  // Estados del Kiosco (ver KioskStatus)
+  const [status, setStatus] = useState<KioskStatus>('loading-camera')
   const [errorMsg, setErrorMsg] = useState('')
   const [identifiedUser, setIdentifiedUser] = useState<{ name: string; email: string } | null>(null)
   const [countdown, setCountdown] = useState(5)
@@ -132,7 +152,7 @@ function AccessKiosk() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 px-4 py-8">
+    <main translate="no" className="min-h-screen bg-zinc-950 text-zinc-100 px-4 py-8">
       <div className="mx-auto max-w-2xl">
         <div className="mb-6">
           <Link
@@ -241,13 +261,7 @@ function AccessKiosk() {
                     }`}
                   />
                   <span className="text-sm font-semibold text-zinc-300">
-                    {status === 'idle' && 'Kiosco Activo y Listo'}
-                    {status === 'loading-camera' && 'Iniciando Cámara...'}
-                    {status === 'capturing' && 'Capturando...'}
-                    {status === 'matching' && 'Emparejando...'}
-                    {status === 'opening' && 'Concediendo acceso...'}
-                    {status === 'success' && 'Puerta Abierta'}
-                    {status === 'failed' && 'Error de Lectura'}
+                    {STATUS_LABELS[status]}
                   </span>
                 </div>
                 {status === 'idle' && (
