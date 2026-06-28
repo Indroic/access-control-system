@@ -30,7 +30,12 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - dokploy-network
+      acs-private:
+        aliases:
+          - server
+      dokploy-network:
+        aliases:
+          - acs-server-public
 
   # ── TanStack Start (Vite) frontend ─────────────────────────────────────────
   web:
@@ -46,7 +51,12 @@ services:
       BIOMETRIC_API_URL: http://biometric-api:8000
     restart: unless-stopped
     networks:
-      - dokploy-network
+      acs-private:
+        aliases:
+          - web
+      dokploy-network:
+        aliases:
+          - acs-web-public
 
   # ── Python biometric API ───────────────────────────────────────────────────
   biometric-api:
@@ -72,9 +82,16 @@ services:
       start_period: 60s
     restart: unless-stopped
     networks:
-      - dokploy-network
+      acs-private:
+        aliases:
+          - biometric-api
+      dokploy-network:
+        aliases:
+          - acs-biometric-public
 
 networks:
+  acs-private:
+    driver: bridge
   # Red compartida de Dokploy (la crea Dokploy). Solo para el ingress de Traefik
   # del único servicio público: 'web'.
   dokploy-network:

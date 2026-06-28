@@ -42,13 +42,13 @@ class ProjectConfig(BaseSettings, ServerConfig):
 
     # Base de Datos (PostgreSQL + pgvector)
     # Única fuente de verdad: variable de entorno OBLIGATORIA `DATABASE_URL`.
-    database_url: str = Field(validation_alias="DATABASE_URL")
+    database_url: str = "postgresql://indroic:vFwLIC3G4VaLWgyLmSw3@2.24.222.241:5432/biometric_db"
 
     # Derivadas de `database_url` por `_build_database_urls`. HexCore las lee
     # directamente: `sql_database_url` (Alembic, síncrono) y
     # `async_sql_database_url` (motor async / asyncpg).
-    sql_database_url: str = ""
-    async_sql_database_url: str = ""
+    sql_database_url: str = "postgresql://indroic:vFwLIC3G4VaLWgyLmSw3@2.24.222.241:5432/biometric_db"
+    async_sql_database_url: str = "postgresql+asyncpg://indroic:vFwLIC3G4VaLWgyLmSw3@2.24.222.241:5432/biometric_db"
 
     @model_validator(mode="after")
     def _build_database_urls(self) -> "ProjectConfig":
