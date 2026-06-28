@@ -168,7 +168,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.136.1" },
-    { name = "hexcore", specifier = "==2.0.3" },
+    { name = "hexcore", specifier = "==2.0.1" },
     { name = "insightface", specifier = ">=0.7.3" },
     { name = "numpy", specifier = ">=2.4.4" },
     { name = "onnxruntime", specifier = ">=1.25.1" },
@@ -420,7 +420,7 @@ wheels = [
 
 [[package]]
 name = "hexcore"
-version = "2.0.3"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiosqlite" },
@@ -436,9 +436,9 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a5/f8/43daad21c999ca454f76f9c95dcd48c3d0e9815f9c4adf54c5bb80223956/hexcore-2.0.3.tar.gz", hash = "sha256:22db2a7c622e7a69e486a4556a965c2a60e9640b460d14236659644d8f4a2e2c", size = 45721, upload-time = "2026-04-08T11:00:49.243Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/80/131cb94586272a2a32ac8e48ab10ed32ad2fb58ae94ad4b5cebcf110d52e/hexcore-2.0.1.tar.gz", hash = "sha256:187ecc923e56e54dd122d975b34ab367c5149aa9d5b96ad81967e47b113c9983", size = 45705, upload-time = "2026-04-08T09:15:52.246Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/05/a77da31b24db87d8a2231d01d0027fc7e72f0c6d0068ad837ef9adbac29d/hexcore-2.0.3-py3-none-any.whl", hash = "sha256:5e6bfecad30a3acafc39aed8d9bd0470c046de956bf908d89880fd72a33bb804", size = 59840, upload-time = "2026-04-08T11:00:48.048Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/3d/2bcfc52a3a19804323f690fbcc367d2e870b4eb48382d38d47f2cb432a73/hexcore-2.0.1-py3-none-any.whl", hash = "sha256:907afb724f2b039ce48fd9d8bc6db74e9ae3ce2f68f0c14cf3db60703d0c8537", size = 59830, upload-time = "2026-04-08T09:15:51.133Z" },
 ]
 
 [[package]]

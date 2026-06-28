@@ -44,8 +44,6 @@ services:
       NEXT_PUBLIC_SERVER_URL: *public-server-url
       INTERNAL_API_KEY: change-me-to-a-safe-internal-secret-key-12345!!
       BIOMETRIC_API_URL: http://biometric-api:8000
-    ports:
-      - "3001:3001"
     restart: unless-stopped
     networks:
       - dokploy-network
@@ -63,8 +61,6 @@ services:
       BETTER_AUTH_ISSUER: *public-server-url
       BETTER_AUTH_AUDIENCE: *public-server-url
       INTERNAL_API_KEY: change-me-to-a-safe-internal-secret-key-12345!!
-    ports:
-      - "8000:8000"
     volumes:
       # Cache InsightFace model files across restarts (~400 MB download)
       - insightface_models:/root/.insightface
