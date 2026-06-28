@@ -16,7 +16,7 @@ export function createAuth() {
 
       schema: schema,
     }),
-    trustedOrigins: [env.CORS_ORIGIN],
+    trustedOrigins: ["https://biometric.indroic.dev", "http://localhost:3000", "http://localhost:3001"],
     emailAndPassword: {
       enabled: true,
       disableSignUp: true,
