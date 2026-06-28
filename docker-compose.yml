@@ -77,8 +77,6 @@ services:
       CORS_ORIGIN: http://localhost:3001
       ADMIN_SETUP_SECRET: super-secret-admin-setup-key-123456
       INTERNAL_API_KEY: change-me-to-a-safe-internal-secret-key-12345!!
-    ports:
-      - "3000:3000"
     depends_on:
       migrate:
         condition: service_completed_successfully
