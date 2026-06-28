@@ -168,7 +168,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.136.1" },
-    { name = "hexcore", specifier = ">=2.0.3" },
+    { name = "hexcore", specifier = "==2.0.3" },
     { name = "insightface", specifier = ">=0.7.3" },
     { name = "numpy", specifier = ">=2.4.4" },
     { name = "onnxruntime", specifier = ">=1.25.1" },

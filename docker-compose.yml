@@ -8,50 +8,6 @@ x-public-server-url: &public-server-url http://localhost:3000
 
 # ─── Services ────────────────────────────────────────────────────────────────
 services:
-
-  # ── Drizzle push (Better-Auth schema) — runs once, exits ──────────────────
-  biometric-api-migrator:
-    build:
-      context: .
-      dockerfile: apps/biometric-api/Dockerfile
-    restart: "no"
-    command: ["sh", "./scripts/migrate.sh"]
-    environment:
-      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL must be set}
-    networks:
-      - dokploy-network
-
-  # ── Alembic upgrade (biometric schema) — runs once, exits ─────────────────
-  biometric-migrate:
-    image: python:3.14-slim
-    container_name: acs-biometric-migrate
-    working_dir: /app
-    command: >
-      sh -c "
-        pip install --quiet --no-cache-dir uv &&
-        uv pip install --system
-          alembic
-          'sqlalchemy[asyncio]'
-          psycopg2-binary
-          hexcore
-          pgvector
-          pydantic-settings &&
-        alembic upgrade head
-      "
-    environment:
-      DATABASE_URL: *database-url
-      HEXCORE_CONFIG_MODULE: "config"
-      PYTHONUNBUFFERED: "1"
-    volumes:
-      - ./apps/biometric-api:/app
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    restart: "no"
-
-    networks:
-      - dokploy-network
-
   # ── Hono backend ──────────────────────────────────────────────────────────
   server:
     build:
@@ -67,9 +23,6 @@ services:
       CORS_ORIGIN: http://localhost:3001
       ADMIN_SETUP_SECRET: super-secret-admin-setup-key-123456
       INTERNAL_API_KEY: change-me-to-a-safe-internal-secret-key-12345!!
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
       interval: 15s
@@ -93,9 +46,6 @@ services:
       BIOMETRIC_API_URL: http://biometric-api:8000
     ports:
       - "3001:3001"
-    depends_on:
-      server:
-        condition: service_healthy
     restart: unless-stopped
     networks:
       - dokploy-network
@@ -118,11 +68,6 @@ services:
     volumes:
       # Cache InsightFace model files across restarts (~400 MB download)
       - insightface_models:/root/.insightface
-    depends_on:
-      biometric-migrate:
-        condition: service_completed_successfully
-      server:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 20s
