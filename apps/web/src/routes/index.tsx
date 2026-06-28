@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Shield, UserPlus, Lock, RefreshCw } from 'lucide-react'
 import { Card, Button, TextField, Label, Input, Alert } from '@heroui/react'
+import { authClient } from '#/utils/auth-client'
 
 export const Route = createFileRoute('/')({ component: EntryPoint })
 
@@ -30,14 +31,10 @@ function EntryPoint() {
     setChecking(true)
     try {
       // 1. Verificar si hay sesión activa
-      const sessionRes = await fetch('/api/auth/get-session')
-      if (sessionRes.ok) {
-        const sessionData = await sessionRes.json()
-        if (sessionData && sessionData.user) {
-          // Redirigir inmediatamente si ya está logueado
-          navigate({ to: '/admin' })
-          return
-        }
+      const { data: sessionData } = await authClient.getSession()
+      if (sessionData?.user) {
+        navigate({ to: '/admin' })
+        return
       }
 
       // 2. Verificar si el sistema requiere configuración inicial (no hay usuarios)
@@ -70,19 +67,12 @@ function EntryPoint() {
     setLoginLoading(true)
 
     try {
-      const res = await fetch('/api/auth/sign-in/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword,
-        }),
+      const { error } = await authClient.signIn.email({
+        email: loginEmail,
+        password: loginPassword,
       })
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.message || 'Credenciales de acceso inválidas.')
-      }
+      if (error) throw new Error(error.message || 'Credenciales de acceso inválidas.')
 
       // Sesión iniciada correctamente, recargar y redirigir
       window.location.href = '/admin'

@@ -15,13 +15,13 @@ import {
 import { Card, Button, TextField, Label, Input, Tabs, Table, Modal, Alert, toast } from '@heroui/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FaceEnrollment } from '#/components/face-enrollment'
+import { authClient } from '#/utils/auth-client'
 
 export const Route = createFileRoute('/admin')({ component: AdminConsole })
 
 function AdminConsole() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [checkingSession, setCheckingSession] = useState(true)
   const [userToDelete, setUserToDelete] = useState<any | null>(null)
   const [activeTab, setActiveTab] = useState<'employees' | 'audit'>('employees')
 
@@ -35,42 +35,20 @@ function AdminConsole() {
   // Estados de captura de rostro de empleado
   const [selectedUserForFace, setSelectedUserForFace] = useState<any | null>(null)
 
-  // Query: Validar sesión del administrador
-  const { data: sessionData, isLoading: sessionLoading, isError: sessionError } = useQuery({
-    queryKey: ['session'],
-    queryFn: async () => {
-      const res = await fetch('/api/auth/get-session')
-      if (!res.ok) throw new Error('No session')
-      const data = await res.json()
-      if (!data || !data.user) throw new Error('No user in session')
-      return data
-    },
-    retry: false,
-  })
-
-  // Sincronizar estado de carga de sesión
-  useEffect(() => {
-    if (!sessionLoading) {
-      setCheckingSession(false)
-    }
-  }, [sessionLoading])
+  // Sesión via authClient
+  const { data: sessionData, isPending: sessionLoading, error: sessionError } = authClient.useSession()
 
   // Redirigir al inicio si la sesión no es válida
   useEffect(() => {
-    if (sessionError) {
+    if (!sessionLoading && (sessionError || !sessionData)) {
       navigate({ to: '/' })
     }
-  }, [sessionError, navigate])
+  }, [sessionError, sessionData, sessionLoading, navigate])
 
   // Función para cerrar sesión
   async function handleLogout() {
-    try {
-      await fetch('/api/auth/sign-out', { method: 'POST' })
-    } catch (err) {
-      console.error('Error al cerrar sesión:', err)
-    } finally {
-      window.location.href = '/'
-    }
+    await authClient.signOut()
+    navigate({ to: '/' })
   }
 
   // Query: Obtener lista de empleados
@@ -127,19 +105,15 @@ function AdminConsole() {
 
   // Mutación: Crear nuevo empleado
   const createEmployeeMutation = useMutation({
-    mutationFn: async (newEmp: any) => {
-      const res = await fetch('/api/auth/admin/create-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newEmp),
+    mutationFn: async (newEmp: { name: string; email: string; password: string; role: 'user' | 'admin' }) => {
+      const { data, error } = await authClient.admin.createUser({
+        name: newEmp.name,
+        email: newEmp.email,
+        password: newEmp.password,
+        role: newEmp.role,
       })
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.message || 'Error al registrar al empleado desde la cuenta de administrador.')
-      }
-
-      return res.json()
+      if (error) throw new Error(error.message || 'Error al registrar al empleado desde la cuenta de administrador.')
+      return data
     },
     onSuccess: (data) => {
       const successMsg = `Empleado ${regName} registrado exitosamente. Ahora puedes capturar su rostro.`
@@ -151,7 +125,7 @@ function AdminConsole() {
       setRegPassword('')
 
       queryClient.invalidateQueries({ queryKey: ['employees'] })
-      setSelectedUserForFace(data.user)
+      setSelectedUserForFace(data?.user)
     },
     onError: (err: any) => {
       const errMsg = err.message || 'Fallo técnico al registrar empleado.'
@@ -176,7 +150,7 @@ function AdminConsole() {
       name: regName,
       email: regEmail,
       password: regPassword,
-      role: 'user',
+      role: 'user' as const,
     })
   }
 
@@ -241,7 +215,7 @@ function AdminConsole() {
     }
   }
 
-  if (checkingSession) {
+  if (sessionLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center bg-background text-foreground">
         <RefreshCw className="animate-spin text-muted" size={32} />
