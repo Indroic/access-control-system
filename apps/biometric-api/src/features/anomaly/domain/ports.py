@@ -6,7 +6,9 @@ class ILoginHistoryReader(ABC):
     """Puerto: lee las marcas de tiempo de logins concedidos de un usuario."""
 
     @abstractmethod
-    async def get_login_times(self, user_id: str, since: datetime) -> list[datetime]:
+    async def get_login_times(
+        self, user_id: str, since: datetime, before: datetime
+    ) -> list[datetime]:
         raise NotImplementedError
 
 

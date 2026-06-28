@@ -7,6 +7,7 @@ from .value_objects import AnomalyConfig, AnomalyResult
 
 _TWO_PI = 2.0 * math.pi
 _HOURS = 24.0
+# Evita división por cero en el z-score cuando R→1 (patrón perfectamente concentrado → sigma→0).
 _SIGMA_FLOOR = 1e-6
 
 

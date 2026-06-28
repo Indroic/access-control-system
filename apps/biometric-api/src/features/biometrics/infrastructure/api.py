@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status, BackgroundTasks, Request
 
@@ -142,7 +142,7 @@ async def identify_user(
         background_tasks.add_task(
             run_login_anomaly_detection,
             user_id=result.user_id,
-            attempt_time=datetime.now(),
+            attempt_time=datetime.now(timezone.utc),
             ip_address=ip,
             user_agent=request.headers.get("user-agent"),
         )

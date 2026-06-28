@@ -32,7 +32,9 @@ class EvaluateLoginAnomalyUseCase(UseCase[EvaluateLoginAnomalyCommand, AnomalyRe
 
     async def execute(self, command: EvaluateLoginAnomalyCommand) -> AnomalyResult:
         since = command.attempt_time - timedelta(days=self._history_days)
-        history = await self._history_reader.get_login_times(command.user_id, since)
+        history = await self._history_reader.get_login_times(
+            command.user_id, since, command.attempt_time
+        )
         history_hours = [_to_decimal_hour(dt) for dt in history]
         attempt_hour = _to_decimal_hour(command.attempt_time)
 

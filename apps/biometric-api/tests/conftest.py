@@ -9,5 +9,5 @@ import os
 
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql://postgres:test@localhost:5432/test",
+    "postgresql://test:test@127.0.0.1:1/none",
 )
