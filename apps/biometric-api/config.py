@@ -2,8 +2,25 @@ from pathlib import Path
 
 from hexcore.config import ServerConfig
 from pydantic import Field
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
+
+
+def _split_database_url(url: str) -> tuple[str, str]:
+    """Separa una URL de base de datos en (dialecto, resto).
+
+    Normaliza el esquema descartando cualquier driver explícito
+    (`postgresql+psycopg2`, `postgresql+asyncpg`, …) y el alias `postgres://`
+    que usan algunos proveedores administrados.
+    """
+    scheme, sep, rest = url.partition("://")
+    if not sep:
+        raise ValueError(f"DATABASE_URL inválida, falta '://': {url!r}")
+    dialect = scheme.split("+", 1)[0]
+    if dialect == "postgres":
+        dialect = "postgresql"
+    return dialect, rest
 
 
 class ProjectConfig(BaseSettings, ServerConfig):
@@ -24,14 +41,21 @@ class ProjectConfig(BaseSettings, ServerConfig):
     debug: bool = Field(default=True, alias="DEBUG")
 
     # Base de Datos (PostgreSQL + pgvector)
-    sql_database_url: str = Field(
-        default="postgresql://postgres:password@localhost:5432/access-control-system",
-        validation_alias="SQL_DATABASE_URL",
-    )
-    async_sql_database_url: str = Field(
-        default="postgresql+asyncpg://postgres:password@localhost:5432/access-control-system",
-        validation_alias="ASYNC_SQL_DATABASE_URL",
-    )
+    # Única fuente de verdad: variable de entorno OBLIGATORIA `DATABASE_URL`.
+    database_url: str = Field(validation_alias="DATABASE_URL")
+
+    # Derivadas de `database_url` por `_build_database_urls`. HexCore las lee
+    # directamente: `sql_database_url` (Alembic, síncrono) y
+    # `async_sql_database_url` (motor async / asyncpg).
+    sql_database_url: str = ""
+    async_sql_database_url: str = ""
+
+    @model_validator(mode="after")
+    def _build_database_urls(self) -> "ProjectConfig":
+        dialect, rest = _split_database_url(self.database_url)
+        self.sql_database_url = f"{dialect}://{rest}"
+        self.async_sql_database_url = f"{dialect}+asyncpg://{rest}"
+        return self
 
     # Integración con Better Auth (Next.js)
     better_auth_url: str = Field(

@@ -14,6 +14,11 @@ Conjunto de diagramas técnicos del sistema, generados siguiendo la metodología
 | 06 | Diccionario de Datos | [`06-diccionario-datos.md`](06-diccionario-datos.md) | Tabular |
 | 07 | Mapa de Navegación | [`07-mapa-navegacion.md`](07-mapa-navegacion.md) | Flowchart + reglas (Mermaid) |
 | 08 | DFD-UML (niveles 0, 1, 2) | [`08-dfd-uml.md`](08-dfd-uml.md) | Yourdon/DeMarco + UML |
+| 09 | Diagrama de Despliegue | [`09-despliegue.md`](09-despliegue.md) | UML Deployment (Mermaid) |
+| 10 | Diagrama de Clases | [`10-clases.md`](10-clases.md) | UML Class (Mermaid) |
+| 11 | Diagrama de Componentes | [`11-componentes.md`](11-componentes.md) | UML Component (Mermaid) |
+| 12 | Diagrama de Comunicación | [`12-comunicacion.md`](12-comunicacion.md) | UML Communication (Mermaid) |
+| 13 | Diagrama de Casos de Uso | [`13-caso-de-uso.md`](13-caso-de-uso.md) | UML Use Case (Mermaid) |
 
 ## Cómo renderizar
 

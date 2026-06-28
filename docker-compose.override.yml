@@ -1,7 +1,8 @@
 # ─── Development overrides ──────────────────────────────────────────────────
 # Auto-merged by `docker compose up` with docker-compose.yml.
 # Replaces production builds with dev images that volume-mount source for
-# hot reload. The base file owns postgres + the one-shot migration services.
+# hot reload. The base file owns the one-shot migration services; PostgreSQL es
+# externo y se inyecta vía la variable de entorno obligatoria DATABASE_URL.
 # ────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -14,7 +15,7 @@ services:
     image: acs-server:dev
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/access-control-system
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL es obligatoria (postgresql://usuario:clave@host:5432/db)}
       BETTER_AUTH_SECRET: a-very-safe-development-secret-key-for-better-auth-32-chars-minimum!!
       BETTER_AUTH_URL: http://localhost:3000
       BIOMETRIC_API_URL: http://biometric-api:8000
@@ -66,8 +67,7 @@ services:
       dockerfile: Dockerfile.dev.biometric
     image: acs-biometric:dev
     environment:
-      SQL_DATABASE_URL: postgresql://postgres:password@postgres:5432/access-control-system
-      ASYNC_SQL_DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/access-control-system
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL es obligatoria (postgresql://usuario:clave@host:5432/db)}
       BETTER_AUTH_URL: http://server:3000/api/auth
       BETTER_AUTH_ISSUER: http://localhost:3000
       BETTER_AUTH_AUDIENCE: http://localhost:3000
@@ -91,3 +91,4 @@ volumes:
   server_app_node_modules:
   web_node_modules:
   web_app_node_modules:
+  biometric_venv:
