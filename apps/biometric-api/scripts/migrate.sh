@@ -1,2 +1,2 @@
 #!/bin/sh
-alembic upgrade head
+uv run alembic upgrade head
