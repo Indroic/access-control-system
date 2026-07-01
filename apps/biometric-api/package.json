@@ -1,8 +1,8 @@
 {
-  "name": "biometric-api",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "uv run uvicorn main:app --reload --port 8000"
-  }
+	"name": "biometric-api",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"dev": "uv run uvicorn main:app --reload --port 8000"
+	}
 }

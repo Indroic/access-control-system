@@ -1,38 +1,38 @@
 {
-  "name": "access-control-system",
-  "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "type": "module",
-  "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "check-types": "turbo check-types",
-    "dev:web": "turbo -F web dev",
-    "dev:server": "turbo -F server dev",
-    "db:push": "turbo -F @access-control-system/db db:push",
-    "db:studio": "turbo -F @access-control-system/db db:studio",
-    "db:generate": "turbo -F @access-control-system/db db:generate",
-    "db:migrate": "turbo -F @access-control-system/db db:migrate",
-    "db:start": "turbo -F @access-control-system/db db:start",
-    "db:watch": "turbo -F @access-control-system/db db:watch",
-    "db:stop": "turbo -F @access-control-system/db db:stop",
-    "db:down": "turbo -F @access-control-system/db db:down",
-    "check": "biome check --write ."
-  },
-  "dependencies": {
-    "@access-control-system/env": "workspace:*",
-    "dotenv": "catalog:",
-    "zod": "catalog:"
-  },
-  "devDependencies": {
-    "@access-control-system/config": "workspace:*",
-    "@biomejs/biome": "^2.2.0",
-    "@types/node": "^22.13.14",
-    "turbo": "^2.8.12",
-    "typescript": "catalog:"
-  },
-  "packageManager": "pnpm@10.32.1"
+	"name": "access-control-system",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"type": "module",
+	"scripts": {
+		"dev": "turbo dev",
+		"build": "turbo build",
+		"check-types": "turbo check-types",
+		"dev:web": "turbo -F web dev",
+		"dev:server": "turbo -F server dev",
+		"db:push": "turbo -F @access-control-system/db db:push",
+		"db:studio": "turbo -F @access-control-system/db db:studio",
+		"db:generate": "turbo -F @access-control-system/db db:generate",
+		"db:migrate": "turbo -F @access-control-system/db db:migrate",
+		"db:start": "turbo -F @access-control-system/db db:start",
+		"db:watch": "turbo -F @access-control-system/db db:watch",
+		"db:stop": "turbo -F @access-control-system/db db:stop",
+		"db:down": "turbo -F @access-control-system/db db:down",
+		"check": "biome check --write ."
+	},
+	"dependencies": {
+		"@access-control-system/env": "workspace:*",
+		"dotenv": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@access-control-system/config": "workspace:*",
+		"@biomejs/biome": "^2.2.0",
+		"@types/node": "^22.13.14",
+		"turbo": "^2.8.12",
+		"typescript": "catalog:"
+	},
+	"packageManager": "pnpm@10.32.1"
 }

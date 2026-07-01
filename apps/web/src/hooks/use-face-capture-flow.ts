@@ -175,7 +175,8 @@ export function useFaceCaptureFlow({
 
 	const handleDetection = useCallback(
 		(det: PoseDetection) => {
-			if (terminalRef.current || lockedRef.current || finishingRef.current) return;
+			if (terminalRef.current || lockedRef.current || finishingRef.current)
+				return;
 
 			const step = stepRef.current;
 			const target = POSE_TARGETS[step];
@@ -184,7 +185,11 @@ export function useFaceCaptureFlow({
 			if (issue !== "ok") {
 				holdSinceRef.current = null;
 				setState((s) => {
-					if (s.phase === "aligning" && s.issue === issue && s.holdProgress === 0) {
+					if (
+						s.phase === "aligning" &&
+						s.issue === issue &&
+						s.holdProgress === 0
+					) {
 						return s;
 					}
 					return { ...s, phase: "aligning", issue, holdProgress: 0 };

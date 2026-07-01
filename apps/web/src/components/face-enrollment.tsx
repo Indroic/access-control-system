@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Spinner } from "@heroui/react";
 import {
 	AlertTriangle,
@@ -7,15 +6,13 @@ import {
 	CheckCircle,
 	User,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCamera } from "#/hooks/use-camera";
-import {
-	type PoseDetection,
-	usePoseDetector,
-} from "#/hooks/use-pose-detector";
 import {
 	type CaptureStep,
 	useFaceCaptureFlow,
 } from "#/hooks/use-face-capture-flow";
+import { type PoseDetection, usePoseDetector } from "#/hooks/use-pose-detector";
 
 export type FaceEnrollmentProps = {
 	userId: string;
@@ -61,7 +58,12 @@ async function uploadFrame(
 	const res = await fetch("/api/auth/face-biometrics/register-face", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ userId, imageBase64, mimeType: "image/jpeg", performedBy }),
+		body: JSON.stringify({
+			userId,
+			imageBase64,
+			mimeType: "image/jpeg",
+			performedBy,
+		}),
 	});
 	if (!res.ok) {
 		const data = (await res.json().catch(() => ({}))) as { message?: string };
@@ -77,7 +79,7 @@ export function FaceEnrollment({
 }: FaceEnrollmentProps) {
 	const [debug, setDebug] = useState<PoseDetection | null>(null);
 	const camera = useCamera({ facingMode: "user", autoStart: true });
-	
+
 	const { state, handleDetection, reset } = useFaceCaptureFlow({
 		capture: camera.capture,
 		onComplete: async (frames) => {
@@ -213,7 +215,7 @@ export function FaceEnrollment({
 				{/* Top: direction arrow + step label */}
 				{camera.state === "ready" &&
 					(state.phase === "aligning" || state.phase === "holding") && (
-						<div className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-zinc-700 bg-zinc-950/80 px-4 py-1.5 text-xs font-bold text-zinc-100">
+						<div className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-zinc-700 bg-zinc-950/80 px-4 py-1.5 font-bold text-xs text-zinc-100">
 							{state.step === "left" && <ArrowLeft size={14} />}
 							{state.step === "front" && <User size={14} />}
 							<span>Paso: {STEP_LABEL[state.step]}</span>
@@ -226,7 +228,7 @@ export function FaceEnrollment({
 					(state.phase === "aligning" || state.phase === "holding") && (
 						<div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2 bg-gradient-to-t from-zinc-950/90 to-transparent px-4 pt-6 pb-4">
 							<p
-								className={`text-sm font-semibold ${
+								className={`font-semibold text-sm ${
 									state.issue === "ok" ? "text-emerald-300" : "text-zinc-100"
 								}`}
 							>
@@ -245,15 +247,15 @@ export function FaceEnrollment({
 				{state.phase === "uploading" && (
 					<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-zinc-950/85 text-white">
 						<Spinner size="lg" />
-						<p className="text-sm font-semibold">Enviando capturas…</p>
+						<p className="font-semibold text-sm">Enviando capturas…</p>
 					</div>
 				)}
 
 				{/* Success overlay */}
 				{state.phase === "done" && (
 					<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-emerald-950/90 text-emerald-200">
-						<CheckCircle size={48} className="animate-in zoom-in" />
-						<p className="text-base font-bold">¡Biometría guardada!</p>
+						<CheckCircle size={48} className="zoom-in animate-in" />
+						<p className="font-bold text-base">¡Biometría guardada!</p>
 					</div>
 				)}
 
@@ -261,8 +263,8 @@ export function FaceEnrollment({
 				{state.phase === "error" && (
 					<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-red-950/90 px-6 text-center text-red-200">
 						<AlertTriangle size={40} />
-						<p className="text-base font-bold">Error al registrar</p>
-						<p className="text-xs text-red-300">{state.error}</p>
+						<p className="font-bold text-base">Error al registrar</p>
+						<p className="text-red-300 text-xs">{state.error}</p>
 						<Button onPress={handleRetry} variant="primary" size="sm">
 							Reintentar
 						</Button>
@@ -271,7 +273,7 @@ export function FaceEnrollment({
 
 				{/* Detector error */}
 				{detector.error && camera.state === "ready" && (
-					<div className="absolute top-16 left-1/2 z-30 -translate-x-1/2 rounded-md bg-red-950/85 px-3 py-1.5 text-xs text-red-200">
+					<div className="absolute top-16 left-1/2 z-30 -translate-x-1/2 rounded-md bg-red-950/85 px-3 py-1.5 text-red-200 text-xs">
 						Detector facial no disponible: {detector.error.message}
 					</div>
 				)}
@@ -286,7 +288,7 @@ export function FaceEnrollment({
 
 				{/* Debug HUD: live pose values (turn off later) */}
 				{detector.ready && debug && (
-					<div className="absolute bottom-2 left-2 z-30 rounded bg-zinc-950/80 px-2 py-1 font-mono text-[10px] leading-tight text-zinc-200">
+					<div className="absolute bottom-2 left-2 z-30 rounded bg-zinc-950/80 px-2 py-1 font-mono text-[10px] text-zinc-200 leading-tight">
 						<div>yaw: {debug.yaw.toFixed(1)}°</div>
 						<div>pitch: {debug.pitch.toFixed(1)}°</div>
 						<div>roll: {debug.roll.toFixed(1)}°</div>
@@ -303,7 +305,7 @@ export function FaceEnrollment({
 					return (
 						<div
 							key={s}
-							className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+							className={`flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold text-xs transition-colors ${
 								done
 									? "border-emerald-700/60 bg-emerald-950/40 text-emerald-300"
 									: active

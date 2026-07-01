@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
 import type {
 	FaceLandmarker,
 	FaceLandmarkerResult,
 } from "@mediapipe/tasks-vision";
+import { useEffect, useRef, useState } from "react";
 
 export type PoseDetection = {
 	yaw: number;
@@ -53,7 +53,11 @@ async function getLandmarker(): Promise<FaceLandmarker> {
 //   m[10] =  cos(yaw) * cos(pitch)
 //   m[1]  =  cos(pitch) * sin(roll)
 //   m[5]  =  cos(pitch) * cos(roll)
-function matrixToEuler(m: Float32Array): { yaw: number; pitch: number; roll: number } {
+function matrixToEuler(m: Float32Array): {
+	yaw: number;
+	pitch: number;
+	roll: number;
+} {
 	const m1 = m[1]!;
 	const m5 = m[5]!;
 	const m8 = m[8]!;

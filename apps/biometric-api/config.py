@@ -91,6 +91,12 @@ class ProjectConfig(BaseSettings, ServerConfig):
         alias="INTERNAL_API_KEY",
     )
 
+    # Detección de anomalía horaria de logins biométricos
+    anomaly_min_samples: int = Field(default=20, alias="ANOMALY_MIN_SAMPLES")
+    anomaly_k: float = Field(default=2.0, alias="ANOMALY_K")
+    anomaly_min_r: float = Field(default=0.35, alias="ANOMALY_MIN_R")
+    anomaly_history_days: int = Field(default=90, alias="ANOMALY_HISTORY_DAYS")
+
     @property
     def auth_base_url(self) -> str:
         return self.better_auth_url.rstrip("/")

@@ -1,5 +1,6 @@
+from datetime import datetime, timezone
 from typing import List
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status, BackgroundTasks, Request
 
 from hexcore.infrastructure.uow import SqlAlchemyUnitOfWork
 from hexcore.infrastructure.api.utils import get_sql_uow
@@ -23,6 +24,10 @@ from ..application.use_cases import (
 )
 from ..infrastructure.repositories import UserFaceRepository
 from src.features.audit.infrastructure.decorators import audit_endpoint
+from src.features.anomaly.infrastructure.tasks import (
+    run_login_anomaly_detection,
+    should_run_login_detection,
+)
 
 router = APIRouter(prefix="/biometrics", tags=["Biometrics"])
 
@@ -113,15 +118,36 @@ async def register_user_biometrics(
     },
 )
 async def identify_user(
+    request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    purpose: str = Form("identify"),
     use_case: IdentifyUserUseCase = Depends(get_identify_use_case),
 ):
     """
     Identifica a un usuario a partir de una foto.
     Retorna el ID del usuario si hay coincidencia, o acceso denegado en caso contrario.
+    Si purpose="login" y hubo match, encola la detección de anomalía horaria.
     """
     image_bytes = await file.read()
-    return await use_case.execute(IdentifyUserCommand(image_bytes=image_bytes))
+    result = await use_case.execute(IdentifyUserCommand(image_bytes=image_bytes))
+
+    if should_run_login_detection(purpose, result):
+        forwarded = request.headers.get("x-forwarded-for")
+        ip = (
+            forwarded.split(",")[0].strip()
+            if forwarded
+            else (request.client.host if request.client else None)
+        )
+        background_tasks.add_task(
+            run_login_anomaly_detection,
+            user_id=result.user_id,
+            attempt_time=datetime.now(timezone.utc),
+            ip_address=ip,
+            user_agent=request.headers.get("user-agent"),
+        )
+
+    return result
 
 
 @router.post("/hardware/open-door", status_code=status.HTTP_200_OK)
