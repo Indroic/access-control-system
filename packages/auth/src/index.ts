@@ -5,7 +5,8 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
 import { faceBiometricsPlugin } from "./plugins/biometric";
-import { admin } from "better-auth/plugins/admin";
+import { admin as adminPlugin } from "better-auth/plugins/admin";
+import { ac, admin, gerente, jefe, user } from "./permissions";
 
 export function createAuth() {
   const db = createDb();
@@ -32,7 +33,15 @@ export function createAuth() {
     },
     plugins: [
       faceBiometricsPlugin(),
-      admin(),
+      adminPlugin({
+        ac,
+        roles: {
+          admin,
+          user,
+          jefe,
+          gerente,
+        },
+      }),
     ],
     hooks: {
       after: createAuthMiddleware(async (ctx) => {

@@ -12,12 +12,21 @@ import {
   RefreshCw,
   LogOut,
 } from 'lucide-react'
-import { Card, Button, TextField, Label, Input, Tabs, Table, Modal, Alert, toast } from '@heroui/react'
+import { Card, Button, TextField, Label, Input, Tabs, Table, Modal, Alert, toast, Select, ListBox } from '@heroui/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FaceEnrollment } from '#/components/face-enrollment'
 import { authClient } from '#/utils/auth-client'
 
 export const Route = createFileRoute('/admin')({ component: AdminConsole })
+
+type EmployeeRole = 'user' | 'jefe' | 'gerente' | 'admin'
+
+const ROLE_OPTIONS: { id: EmployeeRole; label: string }[] = [
+  { id: 'user', label: 'Empleado' },
+  { id: 'jefe', label: 'Jefe' },
+  { id: 'gerente', label: 'Gerente' },
+  { id: 'admin', label: 'Administrador' },
+]
 
 function AdminConsole() {
   const navigate = useNavigate()
@@ -29,6 +38,7 @@ function AdminConsole() {
   const [regName, setRegName] = useState('')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
+  const [regRole, setRegRole] = useState<EmployeeRole>('user')
   const [regSuccess, setRegSuccess] = useState<string | null>(null)
   const [regError, setRegError] = useState<string | null>(null)
 
@@ -105,7 +115,7 @@ function AdminConsole() {
 
   // Mutación: Crear nuevo empleado
   const createEmployeeMutation = useMutation({
-    mutationFn: async (newEmp: { name: string; email: string; password: string; role: 'user' | 'admin' }) => {
+    mutationFn: async (newEmp: { name: string; email: string; password: string; role: EmployeeRole }) => {
       const { data, error } = await authClient.admin.createUser({
         name: newEmp.name,
         email: newEmp.email,
@@ -123,6 +133,7 @@ function AdminConsole() {
       setRegName('')
       setRegEmail('')
       setRegPassword('')
+      setRegRole('user')
 
       queryClient.invalidateQueries({ queryKey: ['employees'] })
       setSelectedUserForFace(data?.user)
@@ -150,7 +161,7 @@ function AdminConsole() {
       name: regName,
       email: regEmail,
       password: regPassword,
-      role: 'user' as const,
+      role: regRole,
     })
   }
 
@@ -324,6 +335,31 @@ function AdminConsole() {
                       </Label>
                       <Input placeholder="Mínimo 8 caracteres" variant="secondary" />
                     </TextField>
+
+                    <Select
+                      value={regRole}
+                      onChange={(value) => setRegRole(value as EmployeeRole)}
+                      variant="secondary"
+                      isRequired
+                    >
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted">
+                        Rol
+                      </Label>
+                      <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover>
+                        <ListBox>
+                          {ROLE_OPTIONS.map((role) => (
+                            <ListBox.Item key={role.id} id={role.id} textValue={role.label}>
+                              {role.label}
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
+                    </Select>
 
                     {regSuccess && (
                       <Alert status="success">
