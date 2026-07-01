@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from src.features.anomaly.application.dtos import EvaluateLoginAnomalyCommand
 from src.features.anomaly.application.use_cases import EvaluateLoginAnomalyUseCase
@@ -6,6 +6,8 @@ from src.features.anomaly.domain.ports import IAuditEventLogger, ILoginHistoryRe
 from src.features.anomaly.domain.services import LoginTimePatternService
 
 _MORNING_HOURS = [8.5, 8.7, 8.9, 9.0, 9.1, 9.2, 9.3, 8.8, 9.0, 9.1] * 2
+# Mismo patrón pero en horas UTC (p.ej. 09:00 local en un servidor UTC-4 => 13:00 UTC).
+_MORNING_UTC = [12.5, 12.7, 12.9, 13.0, 13.1, 13.2, 13.3, 12.8, 13.0, 13.1] * 2
 
 
 def _dt(hour: float):
@@ -14,13 +16,19 @@ def _dt(hour: float):
     return datetime(2026, 1, 1, h, m, 0)
 
 
+def _dt_utc(hour: float):
+    h = int(hour)
+    m = int(round((hour - h) * 60))
+    return datetime(2026, 1, 1, h, m, 0, tzinfo=timezone.utc)
+
+
 class FakeHistoryReader(ILoginHistoryReader):
     def __init__(self, hours):
         self._times = [_dt(h) for h in hours]
         self.calls = []
 
-    async def get_login_times(self, user_id, since):
-        self.calls.append((user_id, since))
+    async def get_login_times(self, user_id, since, before):
+        self.calls.append((user_id, since, before))
         return list(self._times)
 
 
@@ -62,6 +70,7 @@ async def test_suspicious_login_logs_audit_event():
     assert "score" in cmd.details and "mean_hour" in cmd.details
     assert reader.calls[0][0] == "u1"
     assert reader.calls[0][1] == _dt(3.0) - timedelta(days=90)
+    assert reader.calls[0][2] == _dt(3.0)
 
 
 async def test_normal_login_does_not_log():
@@ -92,6 +101,27 @@ async def test_insufficient_history_does_not_log():
 
     result = await use_case.execute(
         EvaluateLoginAnomalyCommand(user_id="u1", attempt_time=_dt(3.0))
+    )
+
+    assert result.is_suspicious is False
+    assert logger.commands == []
+
+
+async def test_tz_aware_consistent_hour_is_not_suspicious():
+    # Regresión de la mezcla naive/UTC: si el baseline (created_at de la BD) es
+    # tz-aware UTC y el intento también es tz-aware UTC, una hora consistente NO
+    # debe marcarse. _to_decimal_hour usa la hora en la propia tz de cada datetime.
+    reader = FakeHistoryReader(_MORNING_UTC)
+    reader._times = [_dt_utc(h) for h in _MORNING_UTC]
+    logger = FakeAuditLogger()
+    use_case = EvaluateLoginAnomalyUseCase(
+        pattern_service=LoginTimePatternService(),
+        history_reader=reader,
+        audit_logger=logger,
+    )
+
+    result = await use_case.execute(
+        EvaluateLoginAnomalyCommand(user_id="u1", attempt_time=_dt_utc(13.08))
     )
 
     assert result.is_suspicious is False

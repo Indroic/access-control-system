@@ -15,3 +15,8 @@ def test_skips_when_not_login_purpose():
 def test_skips_when_no_match():
     result = IdentificationResponse(user_id=None, match=False, message="no")
     assert should_run_login_detection("login", result) is False
+
+
+def test_skips_when_user_id_empty():
+    result = IdentificationResponse(user_id="", match=True, message="ok")
+    assert should_run_login_detection("login", result) is False
