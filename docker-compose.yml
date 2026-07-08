@@ -23,6 +23,9 @@ services:
       CORS_ORIGIN: http://localhost:3001
       ADMIN_SETUP_SECRET: super-secret-admin-setup-key-123456
       INTERNAL_API_KEY: change-me-to-a-safe-internal-secret-key-12345!!
+      VAPID_PUBLIC_KEY: BMRqLkyQkQJwuYsobpLcURXWHe7wZs0oFQ4kmmmmR2AgGceh4E-v9sZeCequheux6NOu-sSV4xHRFWSvDQ_44R0
+      VAPID_PRIVATE_KEY: adFa0rhRonWnPMak2EPDtWj7l1GZQUeuOLYcv2QiM9g
+      VAPID_SUBJECT: mailto:admin@example.com
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
       interval: 15s
@@ -71,6 +74,7 @@ services:
       BETTER_AUTH_ISSUER: *public-server-url
       BETTER_AUTH_AUDIENCE: *public-server-url
       INTERNAL_API_KEY: change-me-to-a-safe-internal-secret-key-12345!!
+      SERVER_INTERNAL_URL: http://server:3000
     volumes:
       # Cache InsightFace model files across restarts (~400 MB download)
       - insightface_models:/root/.insightface
