@@ -132,9 +132,12 @@ rol en `["admin", "gerente", "jefe"]` → `webpush.sendNotification()` a cada un
 paralelo → si una falla con 404/410 (Gone/expirada), se borra esa fila; otros errores
 solo se loguean, no tumban el resto del batch.
 
-**Env vars** (ya añadidas en `packages/env/src/server.ts`): `VAPID_PUBLIC_KEY`,
-`VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. Se reutiliza `INTERNAL_API_KEY` existente para la
-autenticación del endpoint — sin nuevo secreto.
+**Env vars:** `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — ya están en
+`.env.example`/`docker-compose*.yml`, pendientes de declarar con su esquema Zod en
+`packages/env/src/server.ts` (el plan de implementación lo cubre como primer paso, ya
+que `@t3-oss/env-core` lanza un error al arrancar si se lee una var no declarada). Se
+reutiliza `INTERNAL_API_KEY` existente para la autenticación del endpoint — sin nuevo
+secreto.
 
 ## 6. Backend Python (`apps/biometric-api`)
 
