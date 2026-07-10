@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { notifySuspiciousLogin } from "./suspicious-login-notifier";
 
 function makeSubscription(id: string) {
-	return { id, endpoint: `https://push.example/${id}`, p256dh: "p256dh", auth: "auth" };
+	return {
+		id,
+		endpoint: `https://push.example/${id}`,
+		p256dh: "p256dh",
+		auth: "auth",
+	};
 }
 
 const basePayload = {

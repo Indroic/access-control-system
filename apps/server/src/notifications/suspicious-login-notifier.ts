@@ -48,7 +48,10 @@ export async function notifySuspiciousLogin(params: {
 		subscriptions.map(async (sub) => {
 			try {
 				await webpush.sendNotification(
-					{ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+					{
+						endpoint: sub.endpoint,
+						keys: { p256dh: sub.p256dh, auth: sub.auth },
+					},
 					notificationPayload,
 				);
 				sent += 1;
@@ -59,7 +62,11 @@ export async function notifySuspiciousLogin(params: {
 						await onExpired(sub.id);
 						removed += 1;
 					} catch (cleanupError) {
-						console.error("Fallo al limpiar suscripción expirada", sub.id, cleanupError);
+						console.error(
+							"Fallo al limpiar suscripción expirada",
+							sub.id,
+							cleanupError,
+						);
 					}
 				} else {
 					console.error("Fallo al enviar push a", sub.endpoint, error);
