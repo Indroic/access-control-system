@@ -3,15 +3,18 @@ import { appRouter } from "@access-control-system/api/routers/index";
 import { auth } from "@access-control-system/auth";
 import { createDb } from "@access-control-system/db";
 import { oneTimeToken, user } from "@access-control-system/db/schema/auth";
+import { pushSubscription } from "@access-control-system/db/schema/notifications";
 import { env } from "@access-control-system/env/server";
 import { trpcServer } from "@hono/trpc-server";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { EventEmitter } from "events";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { streamSSE } from "hono/streaming";
+import webpush from "web-push";
 import { z } from "zod";
+import { notifySuspiciousLogin } from "./notifications/suspicious-login-notifier";
 
 const sseEvents = new EventEmitter();
 sseEvents.setMaxListeners(100);
@@ -24,6 +27,12 @@ const setupAdminSchema = z.object({
 });
 
 const app = new Hono();
+
+webpush.setVapidDetails(
+	env.VAPID_SUBJECT,
+	env.VAPID_PUBLIC_KEY,
+	env.VAPID_PRIVATE_KEY,
+);
 
 app.use(logger());
 app.use(
@@ -182,6 +191,69 @@ app.post("/api/setup-admin", async (c) => {
 	sseEvents.emit("change");
 
 	return c.json({ success: true });
+});
+
+const suspiciousLoginSchema = z.object({
+	userId: z.string(),
+	ip: z.string().nullable().optional(),
+	userAgent: z.string().nullable().optional(),
+	score: z.number(),
+	reason: z.string(),
+	loginHour: z.number(),
+	occurredAt: z.string(),
+});
+
+app.post("/api/internal/notifications/suspicious-login", async (c) => {
+	if (c.req.header("x-internal-api-key") !== env.INTERNAL_API_KEY) {
+		return c.json({ error: "Unauthorized" }, 401);
+	}
+
+	const parsed = suspiciousLoginSchema.safeParse(
+		await c.req.json().catch(() => null),
+	);
+	if (!parsed.success) {
+		return c.json({ error: "Invalid payload" }, 400);
+	}
+	const body = parsed.data;
+
+	const db = createDb();
+
+	const [suspiciousUser] = await db
+		.select({ name: user.name })
+		.from(user)
+		.where(eq(user.id, body.userId))
+		.limit(1);
+
+	const subscribers = await db
+		.select({
+			id: pushSubscription.id,
+			endpoint: pushSubscription.endpoint,
+			p256dh: pushSubscription.p256dh,
+			auth: pushSubscription.auth,
+		})
+		.from(pushSubscription)
+		.innerJoin(user, eq(pushSubscription.userId, user.id))
+		.where(inArray(user.role, ["admin", "gerente", "jefe"]));
+
+	const result = await notifySuspiciousLogin({
+		subscriptions: subscribers,
+		webpush,
+		payload: {
+			userId: body.userId,
+			userName: suspiciousUser?.name ?? null,
+			ip: body.ip ?? null,
+			userAgent: body.userAgent ?? null,
+			score: body.score,
+			reason: body.reason,
+			loginHour: body.loginHour,
+			occurredAt: body.occurredAt,
+		},
+		onExpired: async (id) => {
+			await db.delete(pushSubscription).where(eq(pushSubscription.id, id));
+		},
+	});
+
+	return c.json({ success: true, ...result });
 });
 
 app.use(
