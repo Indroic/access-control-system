@@ -1,6 +1,7 @@
 import { protectedProcedure, publicProcedure, router } from "../index";
 import { auditRouter } from "./audit";
 import { doorRouter } from "./door";
+import { notificationsRouter } from "./notifications";
 import { usersRouter } from "./users";
 
 export const appRouter = router({
@@ -16,6 +17,7 @@ export const appRouter = router({
 	users: usersRouter,
 	door: doorRouter,
 	audit: auditRouter,
+	notifications: notificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;
