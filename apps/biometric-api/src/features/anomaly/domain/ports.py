@@ -18,3 +18,11 @@ class IAuditEventLogger(ABC):
     @abstractmethod
     async def execute(self, command: object) -> object:
         raise NotImplementedError
+
+
+class IAdminNotifier(ABC):
+    """Puerto: notifica (push) a los administradores sobre un login sospechoso."""
+
+    @abstractmethod
+    async def execute(self, command: object) -> None:
+        raise NotImplementedError

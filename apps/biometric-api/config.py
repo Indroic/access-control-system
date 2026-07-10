@@ -90,6 +90,10 @@ class ProjectConfig(BaseSettings, ServerConfig):
         default="change-me-to-a-safe-internal-secret-key-12345!!",
         alias="INTERNAL_API_KEY",
     )
+    server_internal_url: str = Field(
+        default="http://localhost:3000",
+        alias="SERVER_INTERNAL_URL",
+    )
 
     # Detección de anomalía horaria de logins biométricos
     anomaly_min_samples: int = Field(default=20, alias="ANOMALY_MIN_SAMPLES")
