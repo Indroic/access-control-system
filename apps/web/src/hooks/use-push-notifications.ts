@@ -63,11 +63,12 @@ export function usePushNotifications() {
       return
     }
 
-    await fetch('/api/trpc/notifications.unsubscribe', {
+    const res = await fetch('/api/trpc/notifications.unsubscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint: subscription.endpoint }),
     })
+    if (!res.ok) throw new Error('No se pudo desuscribirse.')
     await subscription.unsubscribe()
     setIsSubscribed(false)
   }, [])
