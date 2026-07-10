@@ -126,3 +126,54 @@ async def test_tz_aware_consistent_hour_is_not_suspicious():
 
     assert result.is_suspicious is False
     assert logger.commands == []
+
+
+from src.features.anomaly.domain.ports import IAdminNotifier
+
+
+class FakeNotifier(IAdminNotifier):
+    def __init__(self):
+        self.commands = []
+
+    async def execute(self, command):
+        self.commands.append(command)
+        return None
+
+
+async def test_suspicious_login_notifies_admin():
+    reader = FakeHistoryReader(_MORNING_HOURS)
+    logger = FakeAuditLogger()
+    notifier = FakeNotifier()
+    use_case = EvaluateLoginAnomalyUseCase(
+        pattern_service=LoginTimePatternService(),
+        history_reader=reader,
+        audit_logger=logger,
+        notifier=notifier,
+    )
+
+    await use_case.execute(
+        EvaluateLoginAnomalyCommand(user_id="u1", attempt_time=_dt(3.0))
+    )
+
+    assert len(notifier.commands) == 1
+    cmd = notifier.commands[0]
+    assert cmd.user_id == "u1"
+    assert cmd.reason == "unusual_hour"
+
+
+async def test_normal_login_does_not_notify():
+    reader = FakeHistoryReader(_MORNING_HOURS)
+    logger = FakeAuditLogger()
+    notifier = FakeNotifier()
+    use_case = EvaluateLoginAnomalyUseCase(
+        pattern_service=LoginTimePatternService(),
+        history_reader=reader,
+        audit_logger=logger,
+        notifier=notifier,
+    )
+
+    await use_case.execute(
+        EvaluateLoginAnomalyCommand(user_id="u1", attempt_time=_dt(9.1))
+    )
+
+    assert notifier.commands == []
