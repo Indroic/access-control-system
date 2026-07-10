@@ -65,4 +65,18 @@ describe("notifySuspiciousLogin", () => {
 		expect(onExpired).not.toHaveBeenCalled();
 		expect(result).toEqual({ sent: 1, removed: 0 });
 	});
+
+	it("does not throw when the onExpired callback itself fails", async () => {
+		const sendNotification = vi.fn().mockRejectedValue({ statusCode: 410 });
+		const onExpired = vi.fn().mockRejectedValue(new Error("db unavailable"));
+
+		const result = await notifySuspiciousLogin({
+			subscriptions: [makeSubscription("a")],
+			webpush: { sendNotification },
+			payload: basePayload,
+			onExpired,
+		});
+
+		expect(result).toEqual({ sent: 0, removed: 0 });
+	});
 });

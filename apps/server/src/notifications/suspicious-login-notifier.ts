@@ -55,8 +55,12 @@ export async function notifySuspiciousLogin(params: {
 			} catch (error) {
 				const statusCode = (error as { statusCode?: number })?.statusCode;
 				if (statusCode === 404 || statusCode === 410) {
-					await onExpired(sub.id);
-					removed += 1;
+					try {
+						await onExpired(sub.id);
+						removed += 1;
+					} catch (cleanupError) {
+						console.error("Fallo al limpiar suscripción expirada", sub.id, cleanupError);
+					}
 				} else {
 					console.error("Fallo al enviar push a", sub.endpoint, error);
 				}
