@@ -17,6 +17,10 @@ WORKDIR /app
 # Install uv
 RUN pip install --no-cache-dir uv
 
+# Algunas dependencias (opencv-python, scikit-image) son wheels de decenas de MB;
+# el timeout HTTP por defecto de uv (30s) no alcanza en redes de build lentas.
+ENV UV_HTTP_TIMEOUT=300
+
 # Copy lockfile first for better layer caching
 COPY apps/biometric-api/pyproject.toml apps/biometric-api/uv.lock ./
 
