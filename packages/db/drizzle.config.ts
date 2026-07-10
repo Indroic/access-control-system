@@ -15,4 +15,18 @@ export default defineConfig({
 	dbCredentials: {
 		url: dbUrl,
 	},
+	// La misma base de datos aloja tablas ajenas a Drizzle (administradas por
+	// Alembic en apps/biometric-api: user_faces, biometric_audit_log,
+	// alembic_version). Sin este filtro, `db:push` las introspecciona igual,
+	// las ve como "a borrar" y pregunta interactivamente si alguna tabla nueva
+	// es un rename de ellas — lo que rompe en entornos sin TTY (CI/Docker).
+	tablesFilter: [
+		"user",
+		"session",
+		"account",
+		"verification",
+		"one_time_token",
+		"audit_log",
+		"push_subscription",
+	],
 });
