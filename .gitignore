@@ -50,3 +50,6 @@ coverage
 tmp
 temp
 .pnpm-store
+
+# Git worktrees (superpowers:using-git-worktrees)
+.worktrees/
