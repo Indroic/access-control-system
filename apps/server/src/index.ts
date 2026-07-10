@@ -266,6 +266,14 @@ app.use(
 		createContext: (_opts, context) => {
 			return createContext({ context });
 		},
+		onError: ({ path, error }) => {
+			// El mensaje que llega al cliente no incluye la causa real (p.ej. el
+			// error concreto de Postgres) — se loguea acá para poder diagnosticar.
+			console.error(`[trpc] Error en "${path}":`, error);
+			if (error.cause) {
+				console.error("[trpc] Causa original:", error.cause);
+			}
+		},
 	}),
 );
 
