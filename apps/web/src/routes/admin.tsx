@@ -11,11 +11,14 @@ import {
   ShieldCheck,
   RefreshCw,
   LogOut,
+  Bell,
+  BellOff,
 } from 'lucide-react'
 import { Card, Button, TextField, Label, Input, Tabs, Table, Modal, Alert, toast, Select, ListBox } from '@heroui/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FaceEnrollment } from '#/components/face-enrollment'
 import { authClient } from '#/utils/auth-client'
+import { usePushNotifications } from '#/hooks/use-push-notifications'
 
 export const Route = createFileRoute('/admin')({ component: AdminConsole })
 
@@ -47,6 +50,24 @@ function AdminConsole() {
 
   // Sesión via authClient
   const { data: sessionData, isPending: sessionLoading, error: sessionError } = authClient.useSession()
+
+  const push = usePushNotifications()
+  const ALERT_ROLES = ['admin', 'gerente', 'jefe']
+  const canReceiveAlerts = ALERT_ROLES.includes((sessionData as any)?.user?.role ?? '')
+
+  async function handleTogglePush() {
+    try {
+      if (push.isSubscribed) {
+        await push.unsubscribe()
+        toast.success('Alertas de seguridad desactivadas.')
+      } else {
+        await push.subscribe()
+        toast.success('Alertas de seguridad activadas.')
+      }
+    } catch (err: any) {
+      toast.danger(err.message || 'No se pudieron actualizar las alertas.')
+    }
+  }
 
   // Redirigir al inicio si la sesión no es válida
   useEffect(() => {
@@ -248,6 +269,16 @@ function AdminConsole() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {canReceiveAlerts && push.isSupported && (
+              <Button
+                onPress={handleTogglePush}
+                variant="secondary"
+                className="flex items-center gap-2 text-sm font-semibold cursor-pointer"
+              >
+                {push.isSubscribed ? <BellOff size={16} /> : <Bell size={16} />}
+                {push.isSubscribed ? 'Desactivar Alertas' : 'Activar Alertas'}
+              </Button>
+            )}
             <Button
               onPress={() => {
                 refetchEmployees()
