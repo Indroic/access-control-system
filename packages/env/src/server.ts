@@ -21,6 +21,15 @@ export const env = createEnv({
 		INTERNAL_API_KEY: z
 			.string()
 			.default("change-me-to-a-safe-internal-secret-key-12345!!"),
+		VAPID_PUBLIC_KEY: z
+			.string()
+			.default(
+				"BMRqLkyQkQJwuYsobpLcURXWHe7wZs0oFQ4kmmmmR2AgGceh4E-v9sZeCequheux6NOu-sSV4xHRFWSvDQ_44R0",
+			),
+		VAPID_PRIVATE_KEY: z
+			.string()
+			.default("adFa0rhRonWnPMak2EPDtWj7l1GZQUeuOLYcv2QiM9g"),
+		VAPID_SUBJECT: z.string().default("mailto:admin@example.com"),
 		NODE_ENV: z
 			.enum(["development", "production", "test"])
 			.default("development"),
