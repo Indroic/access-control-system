@@ -203,6 +203,9 @@ const suspiciousLoginSchema = z.object({
 	occurredAt: z.string(),
 });
 
+// Endpoint interno: NUNCA debe exponerse públicamente en el reverse proxy de
+// producción (igual que /api/setup-admin). Solo accesible en la red interna
+// de Docker; protegido por x-internal-api-key.
 app.post("/api/internal/notifications/suspicious-login", async (c) => {
 	if (c.req.header("x-internal-api-key") !== env.INTERNAL_API_KEY) {
 		return c.json({ error: "Unauthorized" }, 401);
