@@ -1,0 +1,239 @@
+name: acs-local
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Stack LOCAL todo-en-uno. Autocontenido: PostgreSQL (pgvector) + migraciones +
+# los tres servicios de la app con hot-reload. No depende de la red externa
+# `dokploy-network` ni de una `DATABASE_URL` externa (a diferencia de
+# docker-compose.yml / .override.yml, que son de PROD).
+#
+# Uso:
+#   docker compose -f docker-compose.local.yml up
+#   docker compose -f docker-compose.local.yml down          # conserva la BD
+#   docker compose -f docker-compose.local.yml down -v       # borra la BD
+#
+# Puertos en el host:
+#   web            -> http://localhost:3001
+#   server         -> http://localhost:3000
+#   biometric-api  -> http://localhost:8000
+#   postgres       -> localhost:5432  (postgres / password / access-control-system)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ─── Anclas compartidas ───────────────────────────────────────────────────────
+# BD local embebida. Se puede sobreescribir exportando DATABASE_URL, pero por
+# defecto apunta al contenedor `postgres` de este mismo archivo.
+x-database-url: &database-url ${DATABASE_URL:-postgresql://postgres:password@postgres:5432/access-control-system}
+x-internal-api-key: &internal-api-key change-me-to-a-safe-internal-secret-key-12345!!
+
+services:
+  # ── PostgreSQL + pgvector ──────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: acs-postgres
+    environment:
+      POSTGRES_DB: access-control-system
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d access-control-system"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - acs-private
+
+  # ── Migraciones Drizzle (one-shot, db:push) ────────────────────────────────
+  migrate:
+    image: node:22-alpine
+    container_name: acs-migrate
+    working_dir: /monorepo
+    command: >
+      sh -c "
+        corepack enable &&
+        pnpm install --filter @access-control-system/db... --frozen-lockfile &&
+        pnpm --filter @access-control-system/db db:push
+      "
+    environment:
+      CI: "true"
+      DATABASE_URL: *database-url
+    volumes:
+      - .:/monorepo
+      - migrate_node_modules:/monorepo/node_modules
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - acs-private
+
+  # ── Migraciones Alembic del servicio biométrico (one-shot) ─────────────────
+  biometric-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev.biometric
+    image: acs-biometric:dev
+    container_name: acs-biometric-migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: *database-url
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    command: >
+      sh -c "
+        uv sync &&
+        .venv/bin/alembic -c alembic.ini upgrade head
+      "
+    volumes:
+      - ./apps/biometric-api:/app
+      - biometric_venv:/app/.venv
+    working_dir: /app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - acs-private
+
+  # ── Backend Hono (tsx watch, hot-reload) ───────────────────────────────────
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev.server
+    image: acs-server:dev
+    container_name: acs-server
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: *database-url
+      BETTER_AUTH_SECRET: a-very-safe-development-secret-key-for-better-auth-32-chars-minimum!!
+      BETTER_AUTH_URL: http://localhost:3000
+      BIOMETRIC_API_URL: http://biometric-api:8000
+      CORS_ORIGIN: http://localhost:3001
+      ADMIN_SETUP_SECRET: super-secret-admin-setup-key-123456
+      INTERNAL_API_KEY: *internal-api-key
+      VAPID_PUBLIC_KEY: BMRqLkyQkQJwuYsobpLcURXWHe7wZs0oFQ4kmmmmR2AgGceh4E-v9sZeCequheux6NOu-sSV4xHRFWSvDQ_44R0
+      VAPID_PRIVATE_KEY: adFa0rhRonWnPMak2EPDtWj7l1GZQUeuOLYcv2QiM9g
+      VAPID_SUBJECT: mailto:admin@example.com
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/monorepo
+      - server_node_modules:/monorepo/node_modules
+      - server_app_node_modules:/monorepo/apps/server/node_modules
+    working_dir: /monorepo
+    command: >
+      sh -c "
+        corepack enable &&
+        pnpm install &&
+        pnpm --filter server dev
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - acs-private
+
+  # ── Frontend Next.js (dev server, hot-reload) ──────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev.web
+    image: acs-web:dev
+    container_name: acs-web
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      NEXT_PUBLIC_SERVER_URL: http://localhost:3000
+      INTERNAL_API_KEY: *internal-api-key
+      BIOMETRIC_API_URL: http://biometric-api:8000
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/monorepo
+      - web_node_modules:/monorepo/node_modules
+      - web_app_node_modules:/monorepo/apps/web/node_modules
+      # Mantener artefactos de build fuera del bind mount
+      - /monorepo/apps/web/dist
+      - /monorepo/apps/web/.output
+      - /monorepo/apps/web/.tanstack
+    working_dir: /monorepo
+    command: >
+      sh -c "
+        corepack enable &&
+        pnpm install &&
+        pnpm --filter web dev
+      "
+    restart: unless-stopped
+    depends_on:
+      - server
+    networks:
+      - acs-private
+
+  # ── API biométrica en Python (uvicorn --reload) ────────────────────────────
+  biometric-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev.biometric
+    image: acs-biometric:dev
+    container_name: acs-biometric
+    environment:
+      DATABASE_URL: *database-url
+      HEXCORE_CONFIG_MODULE: "config"
+      BETTER_AUTH_URL: http://server:3000/api/auth
+      BETTER_AUTH_ISSUER: http://localhost:3000
+      BETTER_AUTH_AUDIENCE: http://localhost:3000
+      INTERNAL_API_KEY: *internal-api-key
+      SERVER_INTERNAL_URL: http://server:3000
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/biometric-api:/app
+      - biometric_venv:/app/.venv
+      # Cachear los modelos de InsightFace entre reinicios (~400 MB de descarga)
+      - insightface_models:/root/.insightface
+    working_dir: /app
+    command: >
+      sh -c "
+        uv sync &&
+        .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    depends_on:
+      biometric-migrate:
+        condition: service_completed_successfully
+    networks:
+      - acs-private
+
+# ─── Red privada local (bridge, sin dokploy-network externo) ──────────────────
+networks:
+  acs-private:
+    driver: bridge
+
+# ─── Volúmenes ────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  migrate_node_modules:
+  server_node_modules:
+  server_app_node_modules:
+  web_node_modules:
+  web_app_node_modules:
+  biometric_venv:
+  insightface_models:
