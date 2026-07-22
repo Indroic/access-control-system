@@ -72,11 +72,13 @@ services:
       - acs-private
 
   # ── Migraciones Alembic del servicio biométrico (one-shot) ─────────────────
+  # NO tiene `build:` a propósito: reutiliza la imagen `acs-biometric:dev` que
+  # construye el servicio `biometric-api`. Si ambos la construyeran, BuildKit
+  # compilaría la pesada imagen de Python dos veces en paralelo y agotaría la
+  # RAM (el daemon muere con "rpc error ... EOF").
   biometric-migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev.biometric
     image: acs-biometric:dev
+    pull_policy: never
     container_name: acs-biometric-migrate
     restart: "no"
     environment:
