@@ -6,7 +6,8 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import appCss from "../styles.css?url";
 
-const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
+// Termografía is a single committed dark instrument theme.
+const THEME_INIT_SCRIPT = `(function(){try{var root=document.documentElement;root.classList.remove('light');root.classList.add('dark');root.setAttribute('data-theme','dark');root.style.colorScheme='dark';}catch(e){}})();`;
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -28,7 +29,16 @@ export const Route = createRootRoute({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "TanStack Start Starter",
+				title: "Control de Acceso Facial",
+			},
+			{
+				name: "description",
+				content:
+					"Control de acceso por reconocimiento facial: registro biométrico, kiosco de acceso y bitácora de auditoría en tiempo real.",
+			},
+			{
+				name: "color-scheme",
+				content: "light dark",
 			},
 		],
 		links: [
@@ -43,12 +53,12 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" suppressHydrationWarning>
+		<html lang="es" suppressHydrationWarning>
 			<head>
 				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 				<HeadContent />
 			</head>
-			<body className="bg-background font-sans antialiased">
+			<body className="instrument-field min-h-screen font-sans text-foreground antialiased">
 				<QueryClientProvider client={queryClient}>
 					{children}
 				</QueryClientProvider>

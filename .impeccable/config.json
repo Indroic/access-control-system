@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "apps/web/src/styles.css"
+        ],
+        "createdAt": "2026-07-23T15:47:25.111Z",
+        "reason": "User confirmed: drafting grid is the core of the committed 'Plano' architectural-drawing world (a blueprint/measurement surface, the rule's own exemption)"
+      }
+    ]
+  }
+}

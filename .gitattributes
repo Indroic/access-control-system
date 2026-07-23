@@ -1,0 +1,6 @@
+# Normaliza saltos de línea. Los scripts de shell SIEMPRE con LF para que
+# funcionen dentro de contenedores Linux aunque se clonen en Windows.
+* text=auto
+*.sh text eol=lf
+*.sql text eol=lf
+docker/postgres-init.sh text eol=lf

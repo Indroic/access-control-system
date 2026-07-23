@@ -1,2 +1,291 @@
+/*
+ * TERMOGRAFÍA — access control as a thermal-optics instrument.
+ * DIRECTION CONTRACT (seed 2d2c1f28 · re-rolled grounded #6 · mode operate):
+ *   THESIS  the system sees heat/presence; it acquires a face as a target and returns a verdict.
+ *           Refuses the zinc SaaS dashboard AND the night-vision-green / neon-glow cliché.
+ *   WORLD   deep warm-charcoal instrument ground; ironbow signal layer (amber active/brand,
+ *           green granted, red denied, yellow pending); target reticle; mono telemetry. Glow is
+ *           reserved to two authored moments — scan sweep + target lock. Everything else matte.
+ *   BUILD   every structural element is a themed HeroUI v3 component. Custom code = visuals only
+ *           (mark, reticle, scan beam, thermal legend, telemetry rows).
+ *   TYPE    Saira (interface) + Spline Sans Mono (measured data). See /DESIGN.md.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @import "@heroui/styles";
+
+/* ─── Fonts + custom color registration (Tailwind v4 @theme) ────────────── */
+@theme {
+	--font-sans: "Saira", ui-sans-serif, system-ui, -apple-system, sans-serif;
+	--font-display: "Saira", ui-sans-serif, system-ui, sans-serif;
+	--font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+@theme inline {
+	--color-thermal-hot: var(--thermal-hot);
+	--color-thermal-mid: var(--thermal-mid);
+}
+
+/*
+ * One committed dark thermal theme, applied to every theme selector so the
+ * instrument look holds regardless of the data-theme attribute. My blocks come
+ * after @heroui/styles in source order, so equal-specificity vars win.
+ */
+:root,
+.light,
+.dark,
+[data-theme="light"],
+[data-theme="dark"] {
+	color-scheme: dark;
+	--radius: 0.375rem;
+	--field-radius: 0.5rem;
+
+	--background: oklch(0.165 0.022 285);
+	--foreground: oklch(0.95 0.008 70);
+	--surface: oklch(0.215 0.02 285);
+	--surface-foreground: var(--foreground);
+	--surface-secondary: oklch(0.25 0.02 285);
+	--surface-secondary-foreground: var(--foreground);
+	--surface-tertiary: oklch(0.285 0.02 285);
+	--surface-tertiary-foreground: var(--foreground);
+	--overlay: oklch(0.225 0.02 285);
+	--overlay-foreground: var(--foreground);
+	--muted: oklch(0.66 0.02 280);
+	--scrollbar: oklch(0.4 0.02 285);
+
+	--default: oklch(0.285 0.018 285);
+	--default-foreground: var(--foreground);
+
+	--accent: oklch(0.73 0.16 55);
+	--accent-foreground: oklch(0.16 0.02 60);
+
+	--field-background: oklch(0.195 0.02 285);
+	--field-foreground: var(--foreground);
+	--field-placeholder: oklch(0.6 0.02 282);
+	--field-border: oklch(0.95 0.008 70 / 0.16);
+
+	--success: oklch(0.8 0.18 145);
+	--success-foreground: oklch(0.16 0.04 150);
+	--warning: oklch(0.82 0.14 82);
+	--warning-foreground: oklch(0.2 0.04 82);
+	--danger: oklch(0.62 0.23 25);
+	--danger-foreground: oklch(0.98 0.02 30);
+
+	--segment: oklch(0.25 0.02 285);
+	--segment-foreground: var(--foreground);
+	--border: oklch(0.95 0.008 70 / 0.12);
+	--separator: oklch(0.95 0.008 70 / 0.08);
+	--focus: var(--accent);
+	--link: var(--accent);
+	--backdrop: oklch(0.09 0.015 285 / 0.72);
+
+	--thermal-hot: oklch(0.95 0.06 85);
+	--thermal-mid: oklch(0.7 0.19 40);
+
+	--surface-shadow: 0 1px 2px 0 oklch(0.09 0.015 285 / 0.4);
+	--overlay-shadow: 0 12px 40px 0 oklch(0.06 0.01 285 / 0.55);
+	--field-shadow: none;
+}
+
+html {
+	background: var(--background);
+}
+
+/* Warm thermal vignette on the instrument ground — subtle, not a grid */
+body.instrument-field {
+	background-color: var(--background);
+	background-image: radial-gradient(
+		120% 90% at 50% -10%,
+		oklch(0.24 0.03 60 / 0.28),
+		transparent 60%
+	);
+	background-attachment: fixed;
+}
+
+/* ─── Telemetry: mono key→value readout lettering ───────────────────────── */
+.telemetry {
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	line-height: 1;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--muted);
+}
+.readout {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ─── Target reticle: corner brackets framing the acquired subject ──────── */
+.reticle {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+.reticle span {
+	position: absolute;
+	width: 26px;
+	height: 26px;
+	border: 0 solid var(--accent);
+}
+.reticle span:nth-child(1) {
+	top: 10px;
+	left: 10px;
+	border-top-width: 2px;
+	border-left-width: 2px;
+}
+.reticle span:nth-child(2) {
+	top: 10px;
+	right: 10px;
+	border-top-width: 2px;
+	border-right-width: 2px;
+}
+.reticle span:nth-child(3) {
+	bottom: 10px;
+	left: 10px;
+	border-bottom-width: 2px;
+	border-left-width: 2px;
+}
+.reticle span:nth-child(4) {
+	bottom: 10px;
+	right: 10px;
+	border-bottom-width: 2px;
+	border-right-width: 2px;
+}
+.reticle--idle span {
+	border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+	animation: reticle-breathe 3.4s ease-in-out infinite;
+}
+.reticle--grant span {
+	border-color: var(--success);
+}
+.reticle--deny span {
+	border-color: var(--danger);
+}
+@keyframes reticle-breathe {
+	0%,
+	100% {
+		opacity: 0.4;
+	}
+	50% {
+		opacity: 0.9;
+	}
+}
+
+/* ─── Scan beam: the one authored glow, sweeping while matching ─────────── */
+.scan-beam {
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background: linear-gradient(
+		to right,
+		transparent,
+		var(--accent) 15%,
+		var(--thermal-hot) 50%,
+		var(--accent) 85%,
+		transparent
+	);
+	box-shadow: 0 0 16px 2px color-mix(in oklab, var(--accent) 70%, transparent);
+	animation: scan-beam 2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+@keyframes scan-beam {
+	0% {
+		top: 6%;
+	}
+	50% {
+		top: 94%;
+	}
+	100% {
+		top: 6%;
+	}
+}
+
+/* ─── Target lock: verdict box snaps onto the subject ───────────────────── */
+.lock-in {
+	animation: lock-in 460ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@keyframes lock-in {
+	0% {
+		opacity: 0;
+		transform: scale(1.35);
+	}
+	60% {
+		opacity: 1;
+		transform: scale(0.96);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+/* ─── Thermal legend: a thin cold→hot accent bar ────────────────────────── */
+.thermal-legend {
+	height: 3px;
+	border-radius: 999px;
+	background: linear-gradient(
+		to right,
+		oklch(0.2 0.03 285),
+		oklch(0.45 0.16 300),
+		var(--danger),
+		var(--accent),
+		var(--thermal-hot)
+	);
+}
+
+/* ─── Shared entrance / status motion ───────────────────────────────────── */
+.fade-rise {
+	animation: fade-rise 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes fade-rise {
+	0% {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+.row-settle {
+	animation: row-settle 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes row-settle {
+	0% {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+.pulse-dot {
+	animation: pulse-dot 1.7s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.35;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.reticle--idle span,
+	.scan-beam,
+	.lock-in,
+	.fade-rise,
+	.row-settle,
+	.pulse-dot {
+		animation: none !important;
+	}
+}
+
+::selection {
+	background: color-mix(in oklab, var(--accent) 40%, transparent);
+	color: var(--foreground);
+}

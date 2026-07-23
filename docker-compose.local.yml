@@ -178,10 +178,13 @@ services:
       - .:/monorepo
       - web_node_modules:/monorepo/node_modules
       - web_app_node_modules:/monorepo/apps/web/node_modules
-      # Mantener artefactos de build fuera del bind mount
+      # Mantener artefactos de build fuera del bind mount.
+      # OJO: .tanstack NO va aquí. El generador de rutas escribe en
+      # .tanstack/tmp y luego renombra a src/routeTree.gen.ts; si .tanstack
+      # está en otro volumen, el rename cruza dispositivos y falla con EXDEV.
+      # Debe compartir device con src/, o sea, quedarse en el bind-mount.
       - /monorepo/apps/web/dist
       - /monorepo/apps/web/.output
-      - /monorepo/apps/web/.tanstack
     working_dir: /monorepo
     command: >
       sh -c "

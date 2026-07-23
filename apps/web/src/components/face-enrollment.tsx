@@ -1,12 +1,7 @@
-import { Button, Spinner } from "@heroui/react";
-import {
-	AlertTriangle,
-	ArrowLeft,
-	ArrowRight,
-	CheckCircle,
-	User,
-} from "lucide-react";
+import { Alert, Button, Card, Chip, ProgressBar, Spinner } from "@heroui/react";
+import { ArrowLeft, ArrowRight, Check, User } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Reticle } from "#/components/hud";
 import { useCamera } from "#/hooks/use-camera";
 import {
 	type CaptureStep,
@@ -93,7 +88,6 @@ export function FaceEnrollment({
 
 	const onDetection = useCallback(
 		(det: PoseDetection) => {
-			// Throttle debug HUD updates so we don't re-render every frame.
 			if (
 				!debug ||
 				Math.abs(det.yaw - debug.yaw) > 0.5 ||
@@ -136,186 +130,221 @@ export function FaceEnrollment({
 		return issueMessage(state.issue, state.step);
 	}, [state]);
 
+	const aligning = state.phase === "aligning" || state.phase === "holding";
+	const reticleTone =
+		state.phase === "done"
+			? "grant"
+			: state.phase === "error"
+				? "deny"
+				: state.issue === "ok"
+					? "grant"
+					: "idle";
+
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black ring-1 ring-zinc-800">
-				<video
-					ref={camera.videoRef}
-					autoPlay
-					playsInline
-					muted
-					className="h-full w-full scale-x-[-1] object-cover"
-				/>
+			<p className="text-muted text-sm">
+				Captura biométrica en tres poses. El instrumento auto-captura cada
+				plancha cuando la pose es correcta.
+			</p>
 
-				{/* Camera loading / error states */}
-				{camera.state !== "ready" && (
-					<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-zinc-950/80 p-6 text-center text-sm text-white/90">
-						{(camera.state === "requesting" || camera.state === "idle") && (
-							<>
-								<Spinner />
-								<span>Iniciando cámara…</span>
-							</>
-						)}
-						{camera.state === "denied" && (
-							<>
-								<p className="font-medium">Permiso de cámara denegado</p>
-								<p className="text-white/70 text-xs">
-									Habilita la cámara para este sitio y reintenta.
-								</p>
-								<Button onPress={() => void camera.start()} size="sm">
-									Reintentar
-								</Button>
-							</>
-						)}
-						{camera.state === "insecure" && (
-							<p>La cámara requiere HTTPS o localhost.</p>
-						)}
-						{camera.state === "unavailable" && (
-							<>
-								<p className="font-medium">No se detectó cámara</p>
-								<Button onPress={() => void camera.start()} size="sm">
-									Reintentar
-								</Button>
-							</>
-						)}
-						{camera.state === "error" && (
-							<>
-								<p className="font-medium">Error de cámara</p>
-								<p className="text-white/70 text-xs">
-									{camera.error?.message ?? "Fallo desconocido"}
-								</p>
-								<Button onPress={() => void camera.start()} size="sm">
-									Reintentar
-								</Button>
-							</>
-						)}
-					</div>
-				)}
+			<Card variant="secondary" className="overflow-hidden p-0">
+				<div className="relative aspect-video w-full bg-black">
+					<video
+						ref={camera.videoRef}
+						autoPlay
+						playsInline
+						muted
+						className="size-full scale-x-[-1] object-cover"
+					/>
 
-				{/* Face guide silhouette */}
-				{camera.state === "ready" &&
-					state.phase !== "uploading" &&
-					state.phase !== "done" &&
-					state.phase !== "error" && (
-						<div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-							<div
-								className={`h-56 w-44 rounded-[50%] border-4 border-dashed shadow-[0_0_0_120px_rgba(9,9,11,0.55)] transition-colors duration-200 ${
-									state.issue === "ok"
-										? "border-emerald-400"
-										: state.step === "front"
-											? "border-zinc-400"
-											: state.step === "right"
-												? "border-blue-400"
-												: "border-purple-400"
-								}`}
-							/>
+					{camera.state === "ready" && <Reticle tone={reticleTone} />}
+
+					{/* Estados de carga / error de cámara */}
+					{camera.state !== "ready" && (
+						<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/85 p-6 text-center text-sm text-white/90">
+							{(camera.state === "requesting" || camera.state === "idle") && (
+								<>
+									<Spinner />
+									<span className="telemetry text-white/80">
+										Iniciando cámara…
+									</span>
+								</>
+							)}
+							{camera.state === "denied" && (
+								<>
+									<p className="font-display font-semibold text-white">
+										Permiso denegado
+									</p>
+									<p className="text-white/70 text-xs">
+										Habilita la cámara para este sitio y reintenta.
+									</p>
+									<Button onPress={() => void camera.start()} size="sm">
+										Reintentar
+									</Button>
+								</>
+							)}
+							{camera.state === "insecure" && (
+								<p>La cámara requiere HTTPS o localhost.</p>
+							)}
+							{camera.state === "unavailable" && (
+								<>
+									<p className="font-display font-semibold text-white">
+										No se detectó cámara
+									</p>
+									<Button onPress={() => void camera.start()} size="sm">
+										Reintentar
+									</Button>
+								</>
+							)}
+							{camera.state === "error" && (
+								<>
+									<p className="font-display font-semibold text-white">
+										Error de cámara
+									</p>
+									<p className="text-white/70 text-xs">
+										{camera.error?.message ?? "Fallo desconocido"}
+									</p>
+									<Button onPress={() => void camera.start()} size="sm">
+										Reintentar
+									</Button>
+								</>
+							)}
 						</div>
 					)}
 
-				{/* Top: direction arrow + step label */}
-				{camera.state === "ready" &&
-					(state.phase === "aligning" || state.phase === "holding") && (
-						<div className="absolute top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-zinc-700 bg-zinc-950/80 px-4 py-1.5 font-bold text-xs text-zinc-100">
-							{state.step === "left" && <ArrowLeft size={14} />}
-							{state.step === "front" && <User size={14} />}
-							<span>Paso: {STEP_LABEL[state.step]}</span>
-							{state.step === "right" && <ArrowRight size={14} />}
+					{/* Silueta guía facial */}
+					{camera.state === "ready" &&
+						aligning &&
+						state.phase !== "uploading" && (
+							<div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+								<div
+									className={`h-56 w-44 rounded-[50%] border-2 border-dashed shadow-[0_0_0_120px_rgba(0,0,0,0.5)] transition-colors duration-200 ${
+										state.issue === "ok" ? "border-success" : "border-accent/70"
+									}`}
+								/>
+							</div>
+						)}
+
+					{/* Superior: paso actual */}
+					{camera.state === "ready" && aligning && (
+						<div className="absolute top-3 left-1/2 z-20 -translate-x-1/2">
+							<Chip color="accent" variant="primary" size="sm">
+								{state.step === "left" && <ArrowLeft size={13} />}
+								{state.step === "front" && <User size={13} />}
+								<Chip.Label>{STEP_LABEL[state.step]}</Chip.Label>
+								{state.step === "right" && <ArrowRight size={13} />}
+							</Chip>
 						</div>
 					)}
 
-				{/* Bottom: status + hold progress */}
-				{camera.state === "ready" &&
-					(state.phase === "aligning" || state.phase === "holding") && (
-						<div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2 bg-gradient-to-t from-zinc-950/90 to-transparent px-4 pt-6 pb-4">
+					{/* Inferior: estado + barra de retención */}
+					{camera.state === "ready" && aligning && (
+						<div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2 bg-linear-to-t from-black/85 to-transparent px-4 pt-8 pb-4">
 							<p
-								className={`font-semibold text-sm ${
-									state.issue === "ok" ? "text-emerald-300" : "text-zinc-100"
+								className={`font-medium text-sm ${
+									state.issue === "ok" ? "text-success" : "text-white"
 								}`}
 							>
 								{statusText}
 							</p>
-							<div className="h-1.5 w-48 overflow-hidden rounded-full bg-zinc-800">
-								<div
-									className="h-full bg-emerald-400 transition-[width] duration-100"
-									style={{ width: `${state.holdProgress * 100}%` }}
-								/>
-							</div>
+							<ProgressBar
+								value={Math.round(state.holdProgress * 100)}
+								className="w-48"
+								aria-label="Progreso de retención de pose"
+							>
+								<ProgressBar.Track>
+									<ProgressBar.Fill style={{ background: "var(--success)" }} />
+								</ProgressBar.Track>
+							</ProgressBar>
 						</div>
 					)}
 
-				{/* Uploading overlay */}
-				{state.phase === "uploading" && (
-					<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-zinc-950/85 text-white">
-						<Spinner size="lg" />
-						<p className="font-semibold text-sm">Enviando capturas…</p>
-					</div>
-				)}
+					{/* Enviando */}
+					{state.phase === "uploading" && (
+						<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/85 text-white">
+							<Spinner size="lg" />
+							<p className="telemetry text-white/80">Enviando capturas…</p>
+						</div>
+					)}
 
-				{/* Success overlay */}
-				{state.phase === "done" && (
-					<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-emerald-950/90 text-emerald-200">
-						<CheckCircle size={48} className="zoom-in animate-in" />
-						<p className="font-bold text-base">¡Biometría guardada!</p>
-					</div>
-				)}
+					{/* Éxito */}
+					{state.phase === "done" && (
+						<div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70">
+							<Chip
+								color="success"
+								variant="primary"
+								size="lg"
+								className="lock-in px-4 py-2 font-bold font-display uppercase tracking-wide"
+							>
+								<Check size={18} strokeWidth={3} />
+								<Chip.Label>Biometría registrada</Chip.Label>
+							</Chip>
+						</div>
+					)}
 
-				{/* Error overlay */}
-				{state.phase === "error" && (
-					<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-red-950/90 px-6 text-center text-red-200">
-						<AlertTriangle size={40} />
-						<p className="font-bold text-base">Error al registrar</p>
-						<p className="text-red-300 text-xs">{state.error}</p>
-						<Button onPress={handleRetry} variant="primary" size="sm">
-							Reintentar
-						</Button>
-					</div>
-				)}
+					{/* Error */}
+					{state.phase === "error" && (
+						<div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/75 px-6 text-center">
+							<Chip
+								color="danger"
+								variant="primary"
+								size="lg"
+								className="lock-in font-bold font-display uppercase"
+							>
+								Error al registrar
+							</Chip>
+							<p className="max-w-xs text-white/80 text-xs">{state.error}</p>
+							<Button onPress={handleRetry} variant="primary" size="sm">
+								Reintentar
+							</Button>
+						</div>
+					)}
 
-				{/* Detector error */}
-				{detector.error && camera.state === "ready" && (
-					<div className="absolute top-16 left-1/2 z-30 -translate-x-1/2 rounded-md bg-red-950/85 px-3 py-1.5 text-red-200 text-xs">
-						Detector facial no disponible: {detector.error.message}
-					</div>
-				)}
+					{/* HUD de pose — datos medidos en vivo */}
+					{detector.ready && debug && camera.state === "ready" && (
+						<div className="readout absolute bottom-2 left-2 z-30 bg-black/70 px-2 py-1 text-[10px] text-white/80 leading-tight">
+							<div>yaw {debug.yaw.toFixed(1)}°</div>
+							<div>pitch {debug.pitch.toFixed(1)}°</div>
+							<div>faces {debug.faceCount}</div>
+						</div>
+					)}
 
-				{/* Detector loading */}
-				{!detector.ready && !detector.error && camera.state === "ready" && (
-					<div className="absolute top-16 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-md bg-zinc-950/85 px-3 py-1.5 text-xs text-zinc-200">
-						<Spinner size="sm" />
-						<span>Cargando modelo facial…</span>
-					</div>
-				)}
+					{/* Detector cargando */}
+					{!detector.ready && !detector.error && camera.state === "ready" && (
+						<div className="readout absolute top-14 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 bg-black/85 px-3 py-1.5 text-[10px] text-white">
+							<Spinner size="sm" />
+							<span>Cargando modelo facial…</span>
+						</div>
+					)}
+				</div>
+			</Card>
 
-				{/* Debug HUD: live pose values (turn off later) */}
-				{detector.ready && debug && (
-					<div className="absolute bottom-2 left-2 z-30 rounded bg-zinc-950/80 px-2 py-1 font-mono text-[10px] text-zinc-200 leading-tight">
-						<div>yaw: {debug.yaw.toFixed(1)}°</div>
-						<div>pitch: {debug.pitch.toFixed(1)}°</div>
-						<div>roll: {debug.roll.toFixed(1)}°</div>
-						<div>faces: {debug.faceCount}</div>
-					</div>
-				)}
-			</div>
+			{/* Detector no disponible */}
+			{detector.error && camera.state === "ready" && (
+				<Alert status="danger">
+					<Alert.Indicator />
+					<Alert.Content>
+						<Alert.Title>Detector no disponible</Alert.Title>
+						<Alert.Description>{detector.error.message}</Alert.Description>
+					</Alert.Content>
+				</Alert>
+			)}
 
-			{/* Step indicators */}
-			<div className="flex items-center justify-center gap-3">
+			{/* Tríptico de planchas */}
+			<div className="flex items-center justify-center gap-2">
 				{(["front", "right", "left"] as CaptureStep[]).map((s) => {
 					const done = state.completed.includes(s);
 					const active = state.step === s && !done;
 					return (
-						<div
+						<Chip
 							key={s}
-							className={`flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold text-xs transition-colors ${
-								done
-									? "border-emerald-700/60 bg-emerald-950/40 text-emerald-300"
-									: active
-										? "border-zinc-600 bg-zinc-800 text-zinc-100"
-										: "border-zinc-800 bg-zinc-900/50 text-zinc-500"
-							}`}
+							color={done ? "success" : active ? "accent" : "default"}
+							variant={done || active ? "primary" : "soft"}
+							size="sm"
 						>
-							{done ? <CheckCircle size={12} /> : <User size={12} />}
-							{STEP_LABEL[s]}
-						</div>
+							{done ? <Check size={12} /> : <User size={12} />}
+							<Chip.Label>{STEP_LABEL[s]}</Chip.Label>
+						</Chip>
 					);
 				})}
 			</div>

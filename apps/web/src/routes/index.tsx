@@ -1,286 +1,332 @@
-import { useEffect, useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Shield, UserPlus, Lock, RefreshCw } from 'lucide-react'
-import { Card, Button, TextField, Label, Input, Alert } from '@heroui/react'
-import { authClient } from '#/utils/auth-client'
+import {
+	Alert,
+	Button,
+	Card,
+	Chip,
+	Form,
+	Input,
+	Label,
+	Separator,
+	TextField,
+} from "@heroui/react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, ScanFace } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+	AccessMark,
+	Brandmark,
+	TelemetryRow,
+	ThermalLegend,
+} from "#/components/hud";
+import { authClient } from "#/utils/auth-client";
 
-export const Route = createFileRoute('/')({ component: EntryPoint })
+export const Route = createFileRoute("/")({ component: EntryPoint });
 
 function EntryPoint() {
-  const navigate = useNavigate()
-  const [checking, setChecking] = useState(true)
-  const [needsSetup, setNeedsSetup] = useState(false)
+	const navigate = useNavigate();
+	const [checking, setChecking] = useState(true);
+	const [needsSetup, setNeedsSetup] = useState(false);
 
-  // Estados del formulario de Login
-  const [loginEmail, setLoginEmail] = useState('')
-  const [loginPassword, setLoginPassword] = useState('')
-  const [loginError, setLoginError] = useState<string | null>(null)
-  const [loginLoading, setLoginLoading] = useState(false)
+	// Estados del formulario de inicio de sesión
+	const [loginEmail, setLoginEmail] = useState("");
+	const [loginPassword, setLoginPassword] = useState("");
+	const [loginError, setLoginError] = useState<string | null>(null);
+	const [loginLoading, setLoginLoading] = useState(false);
 
-  // Estados del formulario de Startup (Setup Admin)
-  const [setupName, setSetupName] = useState('')
-  const [setupEmail, setSetupEmail] = useState('')
-  const [setupPassword, setSetupPassword] = useState('')
-  const [setupSecret, setSetupSecret] = useState('')
-  const [setupError, setSetupError] = useState<string | null>(null)
-  const [setupSuccess, setSetupSuccess] = useState<string | null>(null)
-  const [setupLoading, setSetupLoading] = useState(false)
+	// Estados del formulario de configuración inicial (root)
+	const [setupName, setSetupName] = useState("");
+	const [setupEmail, setSetupEmail] = useState("");
+	const [setupPassword, setSetupPassword] = useState("");
+	const [setupSecret, setSetupSecret] = useState("");
+	const [setupError, setSetupError] = useState<string | null>(null);
+	const [setupSuccess, setSetupSuccess] = useState<string | null>(null);
+	const [setupLoading, setSetupLoading] = useState(false);
 
-  // Comprobar estado inicial del sistema y sesión
-  async function checkSystemState() {
-    setChecking(true)
-    try {
-      // 1. Verificar si hay sesión activa
-      const { data: sessionData } = await authClient.getSession()
-      if (sessionData?.user) {
-        navigate({ to: '/admin' })
-        return
-      }
+	async function checkSystemState() {
+		setChecking(true);
+		try {
+			const { data: sessionData } = await authClient.getSession();
+			if (sessionData?.user) {
+				navigate({ to: "/admin" });
+				return;
+			}
+			const setupRes = await fetch("/api/setup-status");
+			if (setupRes.ok) {
+				const setupData = await setupRes.json();
+				setNeedsSetup(setupData.needsSetup);
+			}
+		} catch (err) {
+			console.error("Error al comprobar estado del sistema:", err);
+		} finally {
+			setChecking(false);
+		}
+	}
 
-      // 2. Verificar si el sistema requiere configuración inicial (no hay usuarios)
-      const setupRes = await fetch('/api/setup-status')
-      if (setupRes.ok) {
-        const setupData = await setupRes.json()
-        setNeedsSetup(setupData.needsSetup)
-      }
-    } catch (err) {
-      console.error('Error al comprobar estado del sistema:', err)
-    } finally {
-      setChecking(false)
-    }
-  }
+	useEffect(() => {
+		checkSystemState();
+	}, []);
 
-  useEffect(() => {
-    checkSystemState()
-  }, [])
+	async function handleLogin(e: React.FormEvent) {
+		e.preventDefault();
+		setLoginError(null);
+		if (!loginEmail || !loginPassword) {
+			setLoginError("Ingresa tu correo y contraseña.");
+			return;
+		}
+		setLoginLoading(true);
+		try {
+			const { error } = await authClient.signIn.email({
+				email: loginEmail,
+				password: loginPassword,
+			});
+			if (error)
+				throw new Error(error.message || "Credenciales de acceso inválidas.");
+			window.location.href = "/admin";
+		} catch (err: any) {
+			setLoginError(err.message || "Fallo de autenticación con el servidor.");
+		} finally {
+			setLoginLoading(false);
+		}
+	}
 
-  // Procesar Inicio de Sesión
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setLoginError(null)
+	async function handleSetup(e: React.FormEvent) {
+		e.preventDefault();
+		setSetupError(null);
+		setSetupSuccess(null);
+		if (!setupName || !setupEmail || !setupPassword || !setupSecret) {
+			setSetupError("Todos los campos son obligatorios.");
+			return;
+		}
+		setSetupLoading(true);
+		try {
+			const res = await fetch("/api/setup-admin", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					name: setupName,
+					email: setupEmail,
+					password: setupPassword,
+					secret: setupSecret,
+				}),
+			});
+			if (!res.ok) {
+				const errData = await res.json().catch(() => ({}));
+				throw new Error(
+					errData.error || "Error en la inicialización administrativa.",
+				);
+			}
+			setSetupSuccess("Administrador raíz creado. Redirigiendo…");
+			setTimeout(() => checkSystemState(), 1600);
+		} catch (err: any) {
+			setSetupError(err.message || "Error técnico al crear la cuenta raíz.");
+		} finally {
+			setSetupLoading(false);
+		}
+	}
 
-    if (!loginEmail || !loginPassword) {
-      setLoginError('Ingresa tu correo y contraseña.')
-      return
-    }
+	if (checking) {
+		return (
+			<main className="flex min-h-screen items-center justify-center px-4">
+				<div className="flex flex-col items-center gap-4 text-muted">
+					<span className="text-accent">
+						<AccessMark size={44} className="pulse-dot" />
+					</span>
+					<p className="telemetry">Adquiriendo estado del sistema…</p>
+				</div>
+			</main>
+		);
+	}
 
-    setLoginLoading(true)
+	return (
+		<main className="flex min-h-screen items-center justify-center px-4 py-14">
+			<div className="fade-rise w-full max-w-[27rem]">
+				<Brandmark className="mb-6" />
 
-    try {
-      const { error } = await authClient.signIn.email({
-        email: loginEmail,
-        password: loginPassword,
-      })
+				<Card variant="default">
+					<Card.Header className="gap-3">
+						<div className="flex w-full items-center justify-between">
+							<Card.Title className="font-display text-lg">
+								{needsSetup ? "Puesta en marcha" : "Autenticación"}
+							</Card.Title>
+							<Chip
+								color={needsSetup ? "warning" : "success"}
+								variant="soft"
+								size="sm"
+							>
+								<span className="telemetry text-[10px]">
+									{needsSetup ? "Sin admin" : "En línea"}
+								</span>
+							</Chip>
+						</div>
+						<Card.Description>
+							{needsSetup
+								? "No hay administrador registrado. Crea la cuenta raíz con la clave de instalación."
+								: "Acceso de personal al panel de control y a la bitácora de accesos."}
+						</Card.Description>
+						<ThermalLegend className="mt-1 w-full" />
+					</Card.Header>
 
-      if (error) throw new Error(error.message || 'Credenciales de acceso inválidas.')
+					{needsSetup ? (
+						<Form onSubmit={handleSetup}>
+							<Card.Content className="flex flex-col gap-4">
+								<Field
+									name="setupName"
+									label="Nombre del administrador"
+									value={setupName}
+									onChange={setSetupName}
+									placeholder="Administrador principal"
+								/>
+								<Field
+									name="setupEmail"
+									type="email"
+									label="Correo electrónico"
+									value={setupEmail}
+									onChange={setSetupEmail}
+									placeholder="admin@empresa.com"
+								/>
+								<Field
+									name="setupPassword"
+									type="password"
+									label="Contraseña segura"
+									value={setupPassword}
+									onChange={setSetupPassword}
+									placeholder="Mínimo 8 caracteres"
+								/>
+								<Field
+									name="setupSecret"
+									type="password"
+									label="Clave de instalación · ADMIN_SETUP_SECRET"
+									value={setupSecret}
+									onChange={setSetupSecret}
+									placeholder="Secreto de despliegue"
+								/>
+								{setupError && (
+									<Alert status="danger">
+										<Alert.Indicator />
+										<Alert.Content>
+											<Alert.Title>No se pudo inicializar</Alert.Title>
+											<Alert.Description>{setupError}</Alert.Description>
+										</Alert.Content>
+									</Alert>
+								)}
+								{setupSuccess && (
+									<Alert status="success">
+										<Alert.Indicator />
+										<Alert.Content>
+											<Alert.Title>Sistema inicializado</Alert.Title>
+											<Alert.Description>{setupSuccess}</Alert.Description>
+										</Alert.Content>
+									</Alert>
+								)}
+							</Card.Content>
+							<Card.Footer className="mt-4">
+								<Button
+									type="submit"
+									variant="primary"
+									isPending={setupLoading}
+									className="w-full justify-center gap-2 font-semibold"
+								>
+									{setupLoading ? "Inicializando…" : "Inicializar cuenta raíz"}
+									{!setupLoading && <ArrowRight size={16} />}
+								</Button>
+							</Card.Footer>
+						</Form>
+					) : (
+						<Form onSubmit={handleLogin}>
+							<Card.Content className="flex flex-col gap-4">
+								<Field
+									name="loginEmail"
+									type="email"
+									label="Correo electrónico"
+									value={loginEmail}
+									onChange={setLoginEmail}
+									placeholder="admin@empresa.com"
+								/>
+								<Field
+									name="loginPassword"
+									type="password"
+									label="Contraseña"
+									value={loginPassword}
+									onChange={setLoginPassword}
+									placeholder="••••••••"
+								/>
+								{loginError && (
+									<Alert status="danger">
+										<Alert.Indicator />
+										<Alert.Content>
+											<Alert.Title>No se pudo iniciar sesión</Alert.Title>
+											<Alert.Description>{loginError}</Alert.Description>
+										</Alert.Content>
+									</Alert>
+								)}
+							</Card.Content>
+							<Card.Footer className="mt-4">
+								<Button
+									type="submit"
+									variant="primary"
+									isPending={loginLoading}
+									className="w-full justify-center gap-2 font-semibold"
+								>
+									{loginLoading ? "Verificando…" : "Ingresar al sistema"}
+									{!loginLoading && <ArrowRight size={16} />}
+								</Button>
+							</Card.Footer>
+						</Form>
+					)}
+				</Card>
 
-      // Sesión iniciada correctamente, recargar y redirigir
-      window.location.href = '/admin'
-    } catch (err: any) {
-      setLoginError(err.message || 'Fallo de autenticación con el servidor.')
-    } finally {
-      setLoginLoading(false)
-    }
-  }
+				<Separator className="my-5" />
 
-  // Procesar Configuración Inicial de Administrador
-  async function handleSetup(e: React.FormEvent) {
-    e.preventDefault()
-    setSetupError(null)
-    setSetupSuccess(null)
+				<div className="flex items-center justify-between gap-4">
+					<div className="min-w-0 flex-1">
+						<TelemetryRow label="Nodo" value="CAF-01" />
+						<TelemetryRow
+							label="Modo"
+							value={needsSetup ? "SETUP" : "AUTH"}
+							tone="accent"
+						/>
+					</div>
+					<Button
+						variant="secondary"
+						size="sm"
+						className="gap-2 self-end"
+						onPress={() => navigate({ to: "/access" })}
+					>
+						<ScanFace size={16} />
+						Abrir kiosco
+					</Button>
+				</div>
+			</div>
+		</main>
+	);
+}
 
-    if (!setupName || !setupEmail || !setupPassword || !setupSecret) {
-      setSetupError('Todos los campos son obligatorios.')
-      return
-    }
-
-    setSetupLoading(true)
-
-    try {
-      const res = await fetch('/api/setup-admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: setupName,
-          email: setupEmail,
-          password: setupPassword,
-          secret: setupSecret,
-        }),
-      })
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || 'Error en la inicialización administrativa.')
-      }
-
-      setSetupSuccess('Administrador del sistema creado correctamente.')
-      setTimeout(() => {
-        checkSystemState()
-      }, 2000)
-    } catch (err: any) {
-      setSetupError(err.message || 'Error técnico al crear la cuenta raíz.')
-    } finally {
-      setSetupLoading(false)
-    }
-  }
-
-  if (checking) {
-    return (
-      <div className="flex h-[70vh] items-center justify-center bg-background text-foreground">
-        <RefreshCw className="animate-spin text-muted" size={32} />
-      </div>
-    )
-  }
-
-  return (
-    <main className="flex min-h-[85vh] items-center justify-center px-4 py-12 bg-background text-foreground">
-      <div className="w-full max-w-md">
-        {/* Identidad del Sistema */}
-        <div className="mb-8 text-center animate-fade-in">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-foreground shadow-md border border-default-100">
-            <Shield size={28} />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Control de Acceso Facial
-          </h1>
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted mt-1.5">
-            Portal de Seguridad Interno
-          </p>
-        </div>
-
-        {/* Formulario de Configuración Inicial (Startup Page) */}
-        {needsSetup ? (
-          <Card variant="default" className="w-full">
-            <Card.Header className="pb-4 flex flex-col gap-2">
-              <Alert status="warning" className="w-full">
-                <Alert.Indicator />
-                <Alert.Content>
-                  <Alert.Title>Inicialización Requerida</Alert.Title>
-                  <Alert.Description>
-                    No se detecta ningún administrador registrado en el sistema. Crea la cuenta administrativa raíz para comenzar.
-                  </Alert.Description>
-                </Alert.Content>
-              </Alert>
-            </Card.Header>
-            <Card.Content>
-              <form onSubmit={handleSetup} className="flex flex-col gap-4">
-                <TextField name="setupName" value={setupName} onChange={setSetupName} isRequired>
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted">
-                    Nombre del Administrador
-                  </Label>
-                  <Input placeholder="Ej. Administrador Principal" variant="secondary" />
-                </TextField>
-
-                <TextField name="setupEmail" type="email" value={setupEmail} onChange={setSetupEmail} isRequired>
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted">
-                    Correo Electrónico
-                  </Label>
-                  <Input placeholder="admin@empresa.com" variant="secondary" />
-                </TextField>
-
-                <TextField name="setupPassword" type="password" value={setupPassword} onChange={setSetupPassword} isRequired>
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted">
-                    Contraseña Segura
-                  </Label>
-                  <Input placeholder="Mínimo 8 caracteres" variant="secondary" />
-                </TextField>
-
-                <TextField name="setupSecret" type="password" value={setupSecret} onChange={setSetupSecret} isRequired>
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted">
-                    Clave Secreta de Instalación (Setup Secret)
-                  </Label>
-                  <Input placeholder="Verifica ADMIN_SETUP_SECRET" variant="secondary" />
-                </TextField>
-
-                {setupError && (
-                  <Alert status="danger">
-                    <Alert.Indicator />
-                    <Alert.Content>
-                      <Alert.Title>Error de Configuración</Alert.Title>
-                      <Alert.Description>{setupError}</Alert.Description>
-                    </Alert.Content>
-                  </Alert>
-                )}
-
-                {setupSuccess && (
-                  <Alert status="success">
-                    <Alert.Indicator />
-                    <Alert.Content>
-                      <Alert.Title>Inicialización Exitosa</Alert.Title>
-                      <Alert.Description>{setupSuccess}</Alert.Description>
-                    </Alert.Content>
-                  </Alert>
-                )}
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isDisabled={setupLoading}
-                  className="w-full font-bold py-2.5 flex items-center justify-center gap-2"
-                >
-                  {setupLoading ? (
-                    <RefreshCw className="animate-spin" size={16} />
-                  ) : (
-                    <UserPlus size={16} />
-                  )}
-                  Inicializar Sistema Raíz
-                </Button>
-              </form>
-            </Card.Content>
-          </Card>
-        ) : (
-          /* Formulario de Login Clásico */
-          <Card variant="default" className="w-full">
-            <Card.Header className="pb-4">
-              <Card.Title className="text-lg font-bold text-foreground flex items-center gap-2">
-                <Lock size={18} className="text-muted" />
-                Autenticación Requerida
-              </Card.Title>
-            </Card.Header>
-            <Card.Content>
-              <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                <TextField name="loginEmail" type="email" value={loginEmail} onChange={setLoginEmail} isRequired>
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted">
-                    Correo Electrónico
-                  </Label>
-                  <Input placeholder="admin@empresa.com" variant="secondary" />
-                </TextField>
-
-                <TextField name="loginPassword" type="password" value={loginPassword} onChange={setLoginPassword} isRequired>
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted">
-                    Contraseña
-                  </Label>
-                  <Input placeholder="••••••••" variant="secondary" />
-                </TextField>
-
-                {loginError && (
-                  <Alert status="danger">
-                    <Alert.Indicator />
-                    <Alert.Content>
-                      <Alert.Title>Fallo de Inicio de Sesión</Alert.Title>
-                      <Alert.Description>{loginError}</Alert.Description>
-                    </Alert.Content>
-                  </Alert>
-                )}
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isDisabled={loginLoading}
-                  className="w-full font-bold py-2.5 flex items-center justify-center gap-2"
-                >
-                  {loginLoading ? (
-                    <RefreshCw className="animate-spin" size={16} />
-                  ) : (
-                    <Shield size={16} />
-                  )}
-                  Ingresar al Sistema
-                </Button>
-              </form>
-            </Card.Content>
-          </Card>
-        )}
-      </div>
-    </main>
-  )
+/* Composes HeroUI TextField + Label + Input in the instrument's label voice. */
+function Field({
+	name,
+	label,
+	value,
+	onChange,
+	placeholder,
+	type,
+}: {
+	name: string;
+	label: string;
+	value: string;
+	onChange: (v: string) => void;
+	placeholder?: string;
+	type?: string;
+}) {
+	return (
+		<TextField
+			name={name}
+			type={type}
+			value={value}
+			onChange={onChange}
+			isRequired
+		>
+			<Label className="telemetry mb-1.5 block">{label}</Label>
+			<Input placeholder={placeholder} variant="secondary" />
+		</TextField>
+	);
 }
