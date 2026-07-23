@@ -37,7 +37,9 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
+      # .sql (no .sh): lo ejecuta psql directamente, sin shebang, así que es
+      # inmune a terminaciones de línea CRLF de Windows.
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d access-control-system"]
       interval: 10s
@@ -85,10 +87,13 @@ services:
       DATABASE_URL: *database-url
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
+      # Wheels pesados (opencv, onnxruntime); el timeout por defecto de uv (30s)
+      # no alcanza en redes lentas.
+      UV_HTTP_TIMEOUT: "300"
     command: >
       sh -c "
-        uv sync &&
-        .venv/bin/alembic -c alembic.ini upgrade head
+        uv sync --frozen &&
+        uv run --frozen alembic -c alembic.ini upgrade head
       "
     volumes:
       - ./apps/biometric-api:/app
@@ -198,6 +203,7 @@ services:
       SERVER_INTERNAL_URL: http://server:3000
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
+      UV_HTTP_TIMEOUT: "300"
     ports:
       - "8000:8000"
     volumes:
