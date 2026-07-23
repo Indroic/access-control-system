@@ -90,6 +90,10 @@ services:
       # Wheels pesados (opencv, onnxruntime); el timeout por defecto de uv (30s)
       # no alcanza en redes lentas.
       UV_HTTP_TIMEOUT: "300"
+      # El venv se crea FUERA del bind-mount de /app (que lo taparía) y en su
+      # propio volumen. Así `uv sync` instala el entorno completo (incl. alembic,
+      # dependencia transitiva de hexcore) y `uv run` lo encuentra siempre.
+      UV_PROJECT_ENVIRONMENT: /opt/venv
     command: >
       sh -c "
         uv sync --frozen &&
@@ -97,7 +101,7 @@ services:
       "
     volumes:
       - ./apps/biometric-api:/app
-      - biometric_venv:/app/.venv
+      - biometric_venv:/opt/venv
     working_dir: /app
     depends_on:
       migrate:
@@ -113,6 +117,9 @@ services:
     image: acs-server:dev
     container_name: acs-server
     environment:
+      # Sin TTY, pnpm aborta al querer recrear node_modules
+      # (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY). CI=true lo hace no-interactivo.
+      CI: "true"
       NODE_ENV: development
       DATABASE_URL: *database-url
       BETTER_AUTH_SECRET: a-very-safe-development-secret-key-for-better-auth-32-chars-minimum!!
@@ -158,6 +165,8 @@ services:
     image: acs-web:dev
     container_name: acs-web
     environment:
+      # Ver nota en `server`: evita ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY.
+      CI: "true"
       NODE_ENV: development
       PORT: 3001
       NEXT_PUBLIC_SERVER_URL: http://localhost:3000
@@ -204,18 +213,20 @@ services:
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
       UV_HTTP_TIMEOUT: "300"
+      # Ver nota en `biometric-migrate`: venv fuera del bind-mount de /app.
+      UV_PROJECT_ENVIRONMENT: /opt/venv
     ports:
       - "8000:8000"
     volumes:
       - ./apps/biometric-api:/app
-      - biometric_venv:/app/.venv
+      - biometric_venv:/opt/venv
       # Cachear los modelos de InsightFace entre reinicios (~400 MB de descarga)
       - insightface_models:/root/.insightface
     working_dir: /app
     command: >
       sh -c "
-        uv sync &&
-        .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+        uv sync --frozen &&
+        uv run --frozen uvicorn main:app --host 0.0.0.0 --port 8000 --reload
       "
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
