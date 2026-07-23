@@ -1,8 +1,47 @@
 /*
  * TERMOGRAFÍA — non-component visuals only (see /DESIGN.md).
- * The target/face mark, the reticle frame, telemetry rows, and the thermal
- * legend. Everything structural (cards, tabs, tables, chips…) is HeroUI.
+ * The target/face mark, the reticle frame, telemetry rows, the thermal legend,
+ * and the theme toggle. Everything structural (cards, tabs, tables, chips…) is
+ * HeroUI; the toggle is a HeroUI Button.
  */
+import { Button } from "@heroui/react";
+import { Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
+
+/* Light/dark switch — sets class + data-theme so HeroUI vars flip. */
+export function ThemeToggle({ className = "" }: { className?: string }) {
+	const [dark, setDark] = useState(true);
+
+	useEffect(() => {
+		setDark(!document.documentElement.classList.contains("light"));
+	}, []);
+
+	function toggle() {
+		const next = dark ? "light" : "dark";
+		const root = document.documentElement;
+		root.classList.remove("light", "dark");
+		root.classList.add(next);
+		root.setAttribute("data-theme", next);
+		root.style.colorScheme = next;
+		try {
+			window.localStorage.setItem("theme", next);
+		} catch {}
+		setDark(!dark);
+	}
+
+	return (
+		<Button
+			variant="tertiary"
+			size="sm"
+			isIconOnly
+			aria-label={dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+			onPress={toggle}
+			className={className}
+		>
+			{dark ? <Sun size={16} /> : <Moon size={16} />}
+		</Button>
+	);
+}
 
 /* The mark: a face acquired inside a targeting reticle. */
 export function AccessMark({

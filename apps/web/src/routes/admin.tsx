@@ -7,7 +7,6 @@ import {
 	Input,
 	Label,
 	ListBox,
-	Meter,
 	Modal,
 	Select,
 	Separator,
@@ -24,13 +23,14 @@ import {
 	Camera,
 	LogOut,
 	RefreshCw,
+	Search,
 	Trash2,
 	TriangleAlert,
 	UserPlus,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaceEnrollment } from "#/components/face-enrollment";
-import { Brandmark, TelemetryRow, ThermalLegend } from "#/components/hud";
+import { Brandmark, ThemeToggle } from "#/components/hud";
 import { usePushNotifications } from "#/hooks/use-push-notifications";
 import { authClient } from "#/utils/auth-client";
 
@@ -84,6 +84,8 @@ function AdminConsole() {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const [userToDelete, setUserToDelete] = useState<any | null>(null);
+	const [showRegister, setShowRegister] = useState(false);
+	const [query, setQuery] = useState("");
 	const [activeTab, setActiveTab] = useState<"employees" | "audit">(
 		"employees",
 	);
@@ -92,7 +94,6 @@ function AdminConsole() {
 	const [regEmail, setRegEmail] = useState("");
 	const [regPassword, setRegPassword] = useState("");
 	const [regRole, setRegRole] = useState<EmployeeRole>("user");
-	const [regSuccess, setRegSuccess] = useState<string | null>(null);
 	const [regError, setRegError] = useState<string | null>(null);
 
 	const [selectedUserForFace, setSelectedUserForFace] = useState<any | null>(
@@ -201,14 +202,15 @@ function AdminConsole() {
 			return data;
 		},
 		onSuccess: (data) => {
-			const successMsg = `${regName} registrado. Ya puedes capturar su rostro.`;
-			setRegSuccess(successMsg);
-			toast.success(successMsg);
+			toast.success(`${regName} registrado. Captura su rostro para activarlo.`);
 			setRegName("");
 			setRegEmail("");
 			setRegPassword("");
 			setRegRole("user");
+			setRegError(null);
+			setShowRegister(false);
 			queryClient.invalidateQueries({ queryKey: ["employees"] });
+			// Encadena el enrolamiento facial del recién creado.
 			setSelectedUserForFace(data?.user);
 		},
 		onError: (err: any) => {
@@ -218,9 +220,8 @@ function AdminConsole() {
 		},
 	});
 
-	async function handleCreateEmployee(e: React.FormEvent) {
+	function handleCreateEmployee(e: React.FormEvent) {
 		e.preventDefault();
-		setRegSuccess(null);
 		setRegError(null);
 		if (!regName || !regEmail || !regPassword) {
 			const errMsg = "Todos los campos son obligatorios.";
@@ -279,7 +280,15 @@ function AdminConsole() {
 		(l: any) =>
 			l.action === "biometric_match_failed" || l.action === "door_open_failed",
 	).length;
-	const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+
+	const filteredEmployees = useMemo(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return employees;
+		return employees.filter(
+			(e: any) =>
+				e.name?.toLowerCase().includes(q) || e.email?.toLowerCase().includes(q),
+		);
+	}, [employees, query]);
 
 	if (sessionLoading) {
 		return (
@@ -294,6 +303,7 @@ function AdminConsole() {
 			<header className="flex flex-wrap items-center justify-between gap-4 pb-5">
 				<Brandmark sub="Consola de control · en vivo" />
 				<div className="flex flex-wrap items-center gap-2">
+					<ThemeToggle />
 					{canReceiveAlerts && push.isSupported && (
 						<Button
 							onPress={handleTogglePush}
@@ -329,7 +339,16 @@ function AdminConsole() {
 				</div>
 			</header>
 
-			<ThermalLegend className="mb-6 w-full" />
+			{/* Lectura del instrumento — resumen siempre visible */}
+			<Card variant="default" className="mb-6">
+				<Card.Content className="grid grid-cols-2 gap-y-4 sm:grid-cols-5 sm:divide-x sm:divide-separator">
+					<Readout label="Sujetos" value={employees.length} />
+					<Readout label="Con biometría" value={enrolledCount} tone="accent" />
+					<Readout label="Eventos" value={total} />
+					<Readout label="Concedidos" value={grantedCount} tone="grant" />
+					<Readout label="Anomalías" value={failedCount} tone="deny" />
+				</Card.Content>
+			</Card>
 
 			<Tabs
 				selectedKey={activeTab}
@@ -351,391 +370,374 @@ function AdminConsole() {
 
 				{/* ── Personal ── */}
 				<Tabs.Panel id="employees" className="pt-6">
-					{loading && employees.length === 0 ? (
-						<LoadingRow />
-					) : (
-						<div className="grid gap-6 lg:grid-cols-3">
-							<div className="lg:col-span-1">
-								<Card variant="default" className="lg:sticky lg:top-6">
-									<Card.Header>
-										<Card.Title className="flex items-center gap-2 font-display text-base">
-											<UserPlus size={18} className="text-accent" />
-											Alta de personal
-										</Card.Title>
-										<Card.Description>
-											Registra al empleado y luego captura su biometría.
-										</Card.Description>
-									</Card.Header>
-									<form onSubmit={handleCreateEmployee}>
-										<Card.Content className="flex flex-col gap-4">
-											<Field
-												name="regName"
-												label="Nombre completo"
-												value={regName}
-												onChange={setRegName}
-												placeholder="Juan Pérez"
-											/>
-											<Field
-												name="regEmail"
-												type="email"
-												label="Correo electrónico"
-												value={regEmail}
-												onChange={setRegEmail}
-												placeholder="juan.perez@empresa.com"
-											/>
-											<Field
-												name="regPassword"
-												type="password"
-												label="Contraseña inicial"
-												value={regPassword}
-												onChange={setRegPassword}
-												placeholder="Mínimo 8 caracteres"
-											/>
-											<Select
-												value={regRole}
-												onChange={(value) => setRegRole(value as EmployeeRole)}
-												variant="secondary"
-												isRequired
-											>
-												<Label className="telemetry mb-1.5 block">Rol</Label>
-												<Select.Trigger>
-													<Select.Value />
-													<Select.Indicator />
-												</Select.Trigger>
-												<Select.Popover>
-													<ListBox>
-														{ROLE_OPTIONS.map((role) => (
-															<ListBox.Item
-																key={role.id}
-																id={role.id}
-																textValue={role.label}
+					<Card variant="default">
+						<Card.Header>
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<Card.Title className="font-display text-base">
+									Roster de personal
+								</Card.Title>
+								<div className="flex flex-1 items-center justify-end gap-2">
+									<TextField
+										aria-label="Buscar personal"
+										value={query}
+										onChange={setQuery}
+										className="w-full max-w-56"
+									>
+										<Input
+											type="search"
+											variant="secondary"
+											placeholder="Buscar nombre o correo"
+										/>
+									</TextField>
+									<Button
+										onPress={() => {
+											setRegError(null);
+											setShowRegister(true);
+										}}
+										variant="primary"
+										size="sm"
+										className="shrink-0 gap-1.5"
+									>
+										<UserPlus size={15} />
+										Registrar
+									</Button>
+								</div>
+							</div>
+						</Card.Header>
+						<Card.Content className="p-0">
+							{loading && employees.length === 0 ? (
+								<LoadingRow />
+							) : filteredEmployees.length === 0 ? (
+								<EmptyState
+									title={
+										query ? "Sin coincidencias" : "Sin personal registrado"
+									}
+									body={
+										query
+											? "Ningún empleado coincide con la búsqueda."
+											: "Usa “Registrar” para dar de alta al primer empleado y capturar su rostro."
+									}
+								/>
+							) : (
+								<Table variant="secondary">
+									<Table.ScrollContainer>
+										<Table.Content
+											aria-label="Roster de personal"
+											className="min-w-[560px]"
+										>
+											<Table.Header>
+												<Table.Column isRowHeader>Sujeto</Table.Column>
+												<Table.Column>Rol</Table.Column>
+												<Table.Column className="text-center">
+													Biometría
+												</Table.Column>
+												<Table.Column className="text-right">
+													Acciones
+												</Table.Column>
+											</Table.Header>
+											<Table.Body>
+												{filteredEmployees.map((emp: any) => (
+													<Table.Row key={emp.id} id={emp.id}>
+														<Table.Cell className="py-3">
+															<div className="flex items-center gap-3">
+																<Avatar className="size-8 shrink-0">
+																	<Avatar.Fallback className="text-xs">
+																		{initials(emp.name)}
+																	</Avatar.Fallback>
+																</Avatar>
+																<div className="flex flex-col">
+																	<span className="font-medium text-foreground">
+																		{emp.name}
+																	</span>
+																	<span className="readout text-[11px] text-muted">
+																		{emp.email}
+																	</span>
+																</div>
+															</div>
+														</Table.Cell>
+														<Table.Cell className="py-3 text-muted text-sm">
+															{ROLE_LABEL[emp.role] ?? emp.role ?? "—"}
+														</Table.Cell>
+														<Table.Cell className="py-3 text-center">
+															<Chip
+																color={
+																	emp.faceRegistered ? "success" : "warning"
+																}
+																variant="soft"
+																size="sm"
 															>
-																{role.label}
-																<ListBox.ItemIndicator />
-															</ListBox.Item>
-														))}
-													</ListBox>
-												</Select.Popover>
-											</Select>
-
-											{regSuccess && (
-												<Alert status="success">
-													<Alert.Indicator />
-													<Alert.Content>
-														<Alert.Title>Registrado</Alert.Title>
-														<Alert.Description>{regSuccess}</Alert.Description>
-													</Alert.Content>
-												</Alert>
-											)}
-											{regError && (
-												<Alert status="danger">
-													<Alert.Indicator />
-													<Alert.Content>
-														<Alert.Title>No se pudo registrar</Alert.Title>
-														<Alert.Description>{regError}</Alert.Description>
-													</Alert.Content>
-												</Alert>
-											)}
-										</Card.Content>
-										<Card.Footer className="mt-4">
-											<Button
-												type="submit"
-												variant="primary"
-												isPending={createEmployeeMutation.isPending}
-												className="w-full justify-center gap-2 font-semibold"
-											>
-												<UserPlus size={16} />
-												Guardar empleado
-											</Button>
-										</Card.Footer>
-									</form>
-								</Card>
-							</div>
-
-							<div className="lg:col-span-2">
-								<Card variant="default">
-									<Card.Header>
-										<div className="flex items-center justify-between gap-3">
-											<Card.Title className="font-display text-base">
-												Roster de personal
-											</Card.Title>
-											<span className="telemetry">
-												{employees.length} sujetos · {enrolledCount} con
-												biometría
-											</span>
-										</div>
-									</Card.Header>
-									<Card.Content className="p-0">
-										{employees.length === 0 ? (
-											<EmptyState
-												title="Sin personal registrado"
-												body="Da de alta al primer empleado con el formulario; después captura su rostro."
-											/>
-										) : (
-											<Table variant="secondary">
-												<Table.ScrollContainer>
-													<Table.Content
-														aria-label="Roster de personal"
-														className="min-w-[560px]"
-													>
-														<Table.Header>
-															<Table.Column isRowHeader>Sujeto</Table.Column>
-															<Table.Column>Rol</Table.Column>
-															<Table.Column className="text-center">
-																Biometría
-															</Table.Column>
-															<Table.Column className="text-right">
-																Acciones
-															</Table.Column>
-														</Table.Header>
-														<Table.Body>
-															{employees.map((emp: any) => (
-																<Table.Row key={emp.id} id={emp.id}>
-																	<Table.Cell className="py-3">
-																		<div className="flex items-center gap-3">
-																			<Avatar className="size-8 shrink-0">
-																				<Avatar.Fallback className="text-xs">
-																					{initials(emp.name)}
-																				</Avatar.Fallback>
-																			</Avatar>
-																			<div className="flex flex-col">
-																				<span className="font-medium text-foreground">
-																					{emp.name}
-																				</span>
-																				<span className="readout text-[11px] text-muted">
-																					{emp.email}
-																				</span>
-																			</div>
-																		</div>
-																	</Table.Cell>
-																	<Table.Cell className="py-3 text-muted text-sm">
-																		{ROLE_LABEL[emp.role] ?? emp.role ?? "—"}
-																	</Table.Cell>
-																	<Table.Cell className="py-3 text-center">
-																		<Chip
-																			color={
-																				emp.faceRegistered
-																					? "success"
-																					: "warning"
-																			}
-																			variant="soft"
-																			size="sm"
-																		>
-																			{emp.faceRegistered
-																				? "Registrada"
-																				: "Pendiente"}
-																		</Chip>
-																	</Table.Cell>
-																	<Table.Cell className="py-3 text-right">
-																		<div className="flex justify-end gap-2">
-																			<Button
-																				onPress={() =>
-																					setSelectedUserForFace(emp)
-																				}
-																				variant="secondary"
-																				size="sm"
-																				isDisabled={emp.faceRegistered}
-																				className="gap-1.5"
-																			>
-																				<Camera size={14} />
-																				{emp.faceRegistered
-																					? "Enrolada"
-																					: "Capturar"}
-																			</Button>
-																			<Button
-																				onPress={() => setUserToDelete(emp)}
-																				variant="danger"
-																				size="sm"
-																				isIconOnly
-																				isDisabled={emp.role === "admin"}
-																				aria-label={
-																					emp.role === "admin"
-																						? "No se puede eliminar un administrador"
-																						: "Eliminar empleado"
-																				}
-																			>
-																				<Trash2 size={14} />
-																			</Button>
-																		</div>
-																	</Table.Cell>
-																</Table.Row>
-															))}
-														</Table.Body>
-													</Table.Content>
-												</Table.ScrollContainer>
-											</Table>
-										)}
-									</Card.Content>
-								</Card>
-							</div>
-						</div>
-					)}
+																{emp.faceRegistered
+																	? "Registrada"
+																	: "Pendiente"}
+															</Chip>
+														</Table.Cell>
+														<Table.Cell className="py-3 text-right">
+															<div className="flex justify-end gap-2">
+																<Button
+																	onPress={() => setSelectedUserForFace(emp)}
+																	variant="secondary"
+																	size="sm"
+																	isDisabled={emp.faceRegistered}
+																	className="gap-1.5"
+																>
+																	<Camera size={14} />
+																	{emp.faceRegistered ? "Enrolada" : "Capturar"}
+																</Button>
+																<Button
+																	onPress={() => setUserToDelete(emp)}
+																	variant="danger"
+																	size="sm"
+																	isIconOnly
+																	isDisabled={emp.role === "admin"}
+																	aria-label={
+																		emp.role === "admin"
+																			? "No se puede eliminar un administrador"
+																			: "Eliminar empleado"
+																	}
+																>
+																	<Trash2 size={14} />
+																</Button>
+															</div>
+														</Table.Cell>
+													</Table.Row>
+												))}
+											</Table.Body>
+										</Table.Content>
+									</Table.ScrollContainer>
+								</Table>
+							)}
+						</Card.Content>
+					</Card>
 				</Tabs.Panel>
 
 				{/* ── Bitácora ── */}
 				<Tabs.Panel id="audit" className="pt-6">
-					{loading && auditLogs.length === 0 ? (
-						<LoadingRow />
-					) : (
-						<div className="flex flex-col gap-6">
-							<Card variant="default">
-								<Card.Header>
-									<div className="flex items-center justify-between">
-										<Card.Title className="font-display text-base">
-											Lectura del instrumento
-										</Card.Title>
-										<span className="readout text-foreground text-sm">
-											{total} <span className="telemetry">eventos</span>
-										</span>
-									</div>
-								</Card.Header>
-								<Card.Content className="grid gap-6 sm:grid-cols-2">
-									<Meter value={pct(grantedCount)}>
-										<div className="flex items-center justify-between">
-											<Label className="telemetry">Accesos concedidos</Label>
-											<span className="readout text-sm text-success">
-												{grantedCount}
-											</span>
-										</div>
-										<Meter.Track className="mt-2">
-											<Meter.Fill style={{ background: "var(--success)" }} />
-										</Meter.Track>
-									</Meter>
-									<Meter value={pct(failedCount)}>
-										<div className="flex items-center justify-between">
-											<Label className="telemetry">Anomalías / fallos</Label>
-											<span className="readout text-danger text-sm">
-												{failedCount}
-											</span>
-										</div>
-										<Meter.Track className="mt-2">
-											<Meter.Fill style={{ background: "var(--danger)" }} />
-										</Meter.Track>
-									</Meter>
-								</Card.Content>
-							</Card>
-
-							<Card variant="default">
-								<Card.Header>
-									<div className="flex items-center justify-between">
-										<Card.Title className="font-display text-base">
-											Registro de eventos
-										</Card.Title>
-										<Chip color="accent" variant="soft" size="sm">
-											<span className="pulse-dot inline-block size-1.5 rounded-full bg-accent" />
-											<span className="telemetry text-[10px]">
-												En vivo · SSE
-											</span>
-										</Chip>
-									</div>
-								</Card.Header>
-								<Card.Content className="p-0">
-									{auditLogs.length === 0 ? (
-										<EmptyState
-											title="Sin eventos registrados"
-											body="Cada intento de acceso, enrolamiento y apertura aparecerá aquí en tiempo real."
-										/>
-									) : (
-										<Table>
-											<Table.ScrollContainer>
-												<Table.Content
-													aria-label="Registro de eventos"
-													className="min-w-[820px]"
-												>
-													<Table.Header>
-														<Table.Column isRowHeader>
-															Marca de tiempo
-														</Table.Column>
-														<Table.Column>Evento</Table.Column>
-														<Table.Column>Persona</Table.Column>
-														<Table.Column>Origen</Table.Column>
-														<Table.Column className="text-right">
-															Latencia
-														</Table.Column>
-													</Table.Header>
-													<Table.Body>
-														{auditLogs.map((log: any) => {
-															const tag = actionTag(log.action);
-															return (
-																<Table.Row key={log.id} id={log.id}>
-																	<Table.Cell className="readout py-3 text-[11px] text-muted">
-																		{new Date(log.created_at).toLocaleString(
-																			"es-ES",
-																		)}
-																	</Table.Cell>
-																	<Table.Cell className="py-3">
-																		<Chip
-																			color={tag.color}
-																			variant="soft"
-																			size="sm"
-																		>
-																			{tag.label}
-																		</Chip>
-																	</Table.Cell>
-																	<Table.Cell className="py-3">
-																		{log.user ? (
-																			<div className="flex items-center gap-2.5">
-																				<Avatar className="size-6 shrink-0">
-																					<Avatar.Fallback className="text-[10px]">
-																						{initials(log.user.name)}
-																					</Avatar.Fallback>
-																				</Avatar>
-																				<div className="flex flex-col">
-																					<span className="font-medium text-foreground text-sm">
-																						{log.user.name}
-																					</span>
-																					<span className="readout text-[10px] text-muted">
-																						{log.user.email}
-																					</span>
-																				</div>
-																			</div>
-																		) : (
-																			<span className="text-muted text-sm">
-																				Acción del sistema
+					<Card variant="default">
+						<Card.Header>
+							<div className="flex items-center justify-between">
+								<Card.Title className="font-display text-base">
+									Registro de eventos
+								</Card.Title>
+								<Chip color="accent" variant="soft" size="sm">
+									<span className="pulse-dot inline-block size-1.5 rounded-full bg-current" />
+									<Chip.Label>
+										<span className="font-mono text-[10px] uppercase tracking-[0.12em]">En vivo · SSE</span>
+									</Chip.Label>
+								</Chip>
+							</div>
+						</Card.Header>
+						<Card.Content className="p-0">
+							{loading && auditLogs.length === 0 ? (
+								<LoadingRow />
+							) : auditLogs.length === 0 ? (
+								<EmptyState
+									title="Sin eventos registrados"
+									body="Cada intento de acceso, enrolamiento y apertura aparecerá aquí en tiempo real."
+								/>
+							) : (
+								<Table>
+									<Table.ScrollContainer>
+										<Table.Content
+											aria-label="Registro de eventos"
+											className="min-w-[820px]"
+										>
+											<Table.Header>
+												<Table.Column isRowHeader>Marca de tiempo</Table.Column>
+												<Table.Column>Evento</Table.Column>
+												<Table.Column>Persona</Table.Column>
+												<Table.Column>Origen</Table.Column>
+												<Table.Column className="text-right">
+													Latencia
+												</Table.Column>
+											</Table.Header>
+											<Table.Body>
+												{auditLogs.map((log: any) => {
+													const tag = actionTag(log.action);
+													return (
+														<Table.Row key={log.id} id={log.id}>
+															<Table.Cell className="readout py-3 text-[11px] text-muted">
+																{new Date(log.created_at).toLocaleString(
+																	"es-ES",
+																)}
+															</Table.Cell>
+															<Table.Cell className="py-3">
+																<Chip
+																	color={tag.color}
+																	variant="soft"
+																	size="sm"
+																>
+																	{tag.label}
+																</Chip>
+															</Table.Cell>
+															<Table.Cell className="py-3">
+																{log.user ? (
+																	<div className="flex items-center gap-2.5">
+																		<Avatar className="size-6 shrink-0">
+																			<Avatar.Fallback className="text-[10px]">
+																				{initials(log.user.name)}
+																			</Avatar.Fallback>
+																		</Avatar>
+																		<div className="flex flex-col">
+																			<span className="font-medium text-foreground text-sm">
+																				{log.user.name}
 																			</span>
-																		)}
-																	</Table.Cell>
-																	<Table.Cell className="readout py-3 text-[11px] text-muted">
-																		{log.ipAddress || "127.0.0.1"}
-																	</Table.Cell>
-																	<Table.Cell className="py-3 text-right">
-																		{log.details?.latency_ms ? (
-																			<span className="readout text-[11px] text-foreground">
-																				{Number.parseFloat(
-																					log.details.latency_ms,
-																				).toFixed(1)}
-																				<span className="text-muted"> ms</span>
+																			<span className="readout text-[10px] text-muted">
+																				{log.user.email}
 																			</span>
-																		) : log.details?.samples_count ? (
-																			<span className="readout text-[11px] text-muted">
-																				{log.details.samples_count} capt.
-																			</span>
-																		) : (
-																			<span className="readout text-[11px] text-muted">
-																				—
-																			</span>
-																		)}
-																	</Table.Cell>
-																</Table.Row>
-															);
-														})}
-													</Table.Body>
-												</Table.Content>
-											</Table.ScrollContainer>
-										</Table>
-									)}
-								</Card.Content>
-							</Card>
-						</div>
-					)}
+																		</div>
+																	</div>
+																) : (
+																	<span className="text-muted text-sm">
+																		Acción del sistema
+																	</span>
+																)}
+															</Table.Cell>
+															<Table.Cell className="readout py-3 text-[11px] text-muted">
+																{log.ipAddress || "127.0.0.1"}
+															</Table.Cell>
+															<Table.Cell className="py-3 text-right">
+																{log.details?.latency_ms ? (
+																	<span className="readout text-[11px] text-foreground">
+																		{Number.parseFloat(
+																			log.details.latency_ms,
+																		).toFixed(1)}
+																		<span className="text-muted"> ms</span>
+																	</span>
+																) : log.details?.samples_count ? (
+																	<span className="readout text-[11px] text-muted">
+																		{log.details.samples_count} capt.
+																	</span>
+																) : (
+																	<span className="readout text-[11px] text-muted">
+																		—
+																	</span>
+																)}
+															</Table.Cell>
+														</Table.Row>
+													);
+												})}
+											</Table.Body>
+										</Table.Content>
+									</Table.ScrollContainer>
+								</Table>
+							)}
+						</Card.Content>
+					</Card>
 				</Tabs.Panel>
 			</Tabs>
 
 			<Separator className="my-6" />
 			<div className="flex flex-wrap items-center justify-between gap-3">
-				<TelemetryRow label="Operador" value={sessionData?.user?.name ?? "—"} />
+				<span className="telemetry">
+					Operador ·{" "}
+					<span className="readout text-foreground">
+						{sessionData?.user?.name ?? "—"}
+					</span>
+				</span>
 				<span className="telemetry">Nodo CAF-01 · sesión activa</span>
 			</div>
+
+			{/* Modal de alta de personal */}
+			<Modal
+				isOpen={showRegister}
+				onOpenChange={(isOpen) => {
+					if (!isOpen) setShowRegister(false);
+				}}
+			>
+				<Modal.Backdrop variant="blur">
+					<Modal.Container size="md" placement="center" className="text-left">
+						<Modal.Dialog>
+							<Modal.CloseTrigger />
+							<Modal.Header>
+								<Modal.Heading className="flex items-center gap-2 font-display font-semibold text-base">
+									<UserPlus size={18} className="text-accent" />
+									Registrar empleado
+								</Modal.Heading>
+							</Modal.Header>
+							<form onSubmit={handleCreateEmployee}>
+								<Modal.Body className="flex flex-col gap-4 pt-2">
+									<Field
+										name="regName"
+										label="Nombre completo"
+										value={regName}
+										onChange={setRegName}
+										placeholder="Juan Pérez"
+									/>
+									<Field
+										name="regEmail"
+										type="email"
+										label="Correo electrónico"
+										value={regEmail}
+										onChange={setRegEmail}
+										placeholder="juan.perez@empresa.com"
+									/>
+									<Field
+										name="regPassword"
+										type="password"
+										label="Contraseña inicial"
+										value={regPassword}
+										onChange={setRegPassword}
+										placeholder="Mínimo 8 caracteres"
+									/>
+									<Select
+										value={regRole}
+										onChange={(value) => setRegRole(value as EmployeeRole)}
+										variant="secondary"
+										isRequired
+									>
+										<Label className="telemetry mb-1.5 block">Rol</Label>
+										<Select.Trigger>
+											<Select.Value />
+											<Select.Indicator />
+										</Select.Trigger>
+										<Select.Popover>
+											<ListBox>
+												{ROLE_OPTIONS.map((role) => (
+													<ListBox.Item
+														key={role.id}
+														id={role.id}
+														textValue={role.label}
+													>
+														{role.label}
+														<ListBox.ItemIndicator />
+													</ListBox.Item>
+												))}
+											</ListBox>
+										</Select.Popover>
+									</Select>
+									{regError && (
+										<Alert status="danger">
+											<Alert.Indicator />
+											<Alert.Content>
+												<Alert.Title>No se pudo registrar</Alert.Title>
+												<Alert.Description>{regError}</Alert.Description>
+											</Alert.Content>
+										</Alert>
+									)}
+								</Modal.Body>
+								<Modal.Footer className="mt-6 flex justify-end gap-3">
+									<Button
+										type="button"
+										variant="secondary"
+										onPress={() => setShowRegister(false)}
+									>
+										Cancelar
+									</Button>
+									<Button
+										type="submit"
+										variant="primary"
+										isPending={createEmployeeMutation.isPending}
+										className="gap-2 font-semibold"
+									>
+										<UserPlus size={16} />
+										Guardar
+									</Button>
+								</Modal.Footer>
+							</form>
+						</Modal.Dialog>
+					</Modal.Container>
+				</Modal.Backdrop>
+			</Modal>
 
 			{/* Modal de enrolamiento facial */}
 			<Modal
@@ -826,6 +828,33 @@ function AdminConsole() {
 	);
 }
 
+function Readout({
+	label,
+	value,
+	tone = "default",
+}: {
+	label: string;
+	value: number;
+	tone?: "default" | "accent" | "grant" | "deny";
+}) {
+	const color =
+		tone === "accent"
+			? "text-accent"
+			: tone === "grant"
+				? "text-success"
+				: tone === "deny"
+					? "text-danger"
+					: "text-foreground";
+	return (
+		<div className="px-2 sm:px-4">
+			<div className="telemetry">{label}</div>
+			<div className={`readout mt-1.5 font-semibold text-2xl ${color}`}>
+				{value}
+			</div>
+		</div>
+	);
+}
+
 function LoadingRow() {
 	return (
 		<div className="flex items-center justify-center py-24 text-muted">
@@ -837,6 +866,7 @@ function LoadingRow() {
 function EmptyState({ title, body }: { title: string; body: string }) {
 	return (
 		<div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
+			<Search size={22} className="text-muted" />
 			<p className="font-display font-semibold text-[15px] text-foreground">
 				{title}
 			</p>

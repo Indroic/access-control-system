@@ -16,6 +16,7 @@ import {
 	AccessMark,
 	Brandmark,
 	TelemetryRow,
+	ThemeToggle,
 	ThermalLegend,
 } from "#/components/hud";
 import { authClient } from "#/utils/auth-client";
@@ -140,7 +141,10 @@ function EntryPoint() {
 	return (
 		<main className="flex min-h-screen items-center justify-center px-4 py-14">
 			<div className="fade-rise w-full max-w-[27rem]">
-				<Brandmark className="mb-6" />
+				<div className="mb-6 flex items-center justify-between gap-3">
+					<Brandmark />
+					<ThemeToggle />
+				</div>
 
 				<Card variant="default">
 					<Card.Header className="gap-3">
@@ -153,7 +157,7 @@ function EntryPoint() {
 								variant="soft"
 								size="sm"
 							>
-								<span className="telemetry text-[10px]">
+								<span className="font-mono text-[10px] uppercase tracking-[0.12em]">
 									{needsSetup ? "Sin admin" : "En línea"}
 								</span>
 							</Chip>

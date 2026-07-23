@@ -6,8 +6,8 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import appCss from "../styles.css?url";
 
-// Termografía is a single committed dark instrument theme.
-const THEME_INIT_SCRIPT = `(function(){try{var root=document.documentElement;root.classList.remove('light');root.classList.add('dark');root.setAttribute('data-theme','dark');root.style.colorScheme='dark';}catch(e){}})();`;
+// Termografía: dark instrument by default; honors a stored light/dark choice, else system.
+const THEME_INIT_SCRIPT = `(function(){try{var s=window.localStorage.getItem('theme');var t=(s==='light'||s==='dark')?s:(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');var r=document.documentElement;r.classList.remove('light','dark');r.classList.add(t);r.setAttribute('data-theme',t);r.style.colorScheme=t;}catch(e){}})();`;
 
 const queryClient = new QueryClient({
 	defaultOptions: {

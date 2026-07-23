@@ -1,7 +1,7 @@
 # Termografía — Style Reference
 > a thermal-optics instrument that acquires a face and returns a verdict
 
-**Theme:** dark, single committed theme (a warm-charcoal thermal instrument). Built on HeroUI v3.
+**Theme:** dark "night instrument" by default + a light "daylight instrument" variant, toggleable. Built on HeroUI v3.
 
 <!-- DIRECTION CONTRACT (seed 2d2c1f28 · re-rolled grounded #6 · mode operate)
 THESIS: the system sees heat and presence — a thermal-optics instrument that acquires a face as
@@ -44,10 +44,12 @@ the scan beam, the thermal legend bar, and telemetry rows.
 
 ## Theme & Ground
 
-Dark, one committed theme. Deep warm-charcoal ground (`--background`), matte panels a step
-lighter, warm off-white text. Not pure black, not neon. The use scene forces dark: a security
-instrument watched over long sessions and a kiosk that reads as a lit instrument panel in a dim
-entryway.
+Two themes, toggled by a HeroUI Button in each header (choice persisted; defaults to system, then
+dark). **Dark "night instrument"** (default): deep warm-charcoal ground, matte panels a step
+lighter, warm off-white text — a security instrument watched over long sessions / a lit kiosk
+panel in a dim entryway. **Light "daylight instrument"**: warm off-white paper ground, dark
+charcoal-blue text, same ironbow signal (accent/success/danger darkened for contrast). Not pure
+black, not neon in either.
 
 ## Color strategy
 

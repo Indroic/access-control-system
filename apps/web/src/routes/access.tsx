@@ -6,6 +6,7 @@ import {
 	Brandmark,
 	Reticle,
 	TelemetryRow,
+	ThemeToggle,
 	ThermalLegend,
 } from "#/components/hud";
 
@@ -169,7 +170,10 @@ function AccessKiosk() {
 					<ArrowLeft size={16} />
 					Volver
 				</Button>
-				<Brandmark sub="Kiosco · umbral de acceso" />
+				<div className="flex items-center gap-3">
+					<Brandmark sub="Kiosco · umbral de acceso" />
+					<ThemeToggle />
+				</div>
 			</header>
 
 			<div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center py-8">
@@ -256,20 +260,21 @@ function AccessKiosk() {
 										size="sm"
 									>
 										<span
-											className={`inline-block size-1.5 rounded-full ${scanning || status === "idle" ? "pulse-dot" : ""}`}
-											style={{ background: "currentColor" }}
+											className={`inline-block size-1.5 rounded-full bg-current ${scanning || status === "idle" ? "pulse-dot" : ""}`}
 										/>
-										<span className="telemetry text-[10px]">
-											{status === "idle"
-												? "Listo"
-												: scanning
-													? "Activo"
-													: verdict
-														? status === "success"
-															? "OK"
-															: "Fallo"
-														: "Init"}
-										</span>
+										<Chip.Label>
+											<span className="font-mono text-[10px] uppercase tracking-[0.12em]">
+												{status === "idle"
+													? "Listo"
+													: scanning
+														? "Activo"
+														: verdict
+															? status === "success"
+																? "OK"
+																: "Fallo"
+															: "Init"}
+											</span>
+										</Chip.Label>
 									</Chip>
 								</div>
 								<ThermalLegend className="mt-2 w-full" />
