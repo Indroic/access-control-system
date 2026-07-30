@@ -28,5 +28,8 @@ export default defineConfig({
 		"one_time_token",
 		"audit_log",
 		"push_subscription",
+		"user_image",
+		"security_zone",
+		"security_incident",
 	],
 });

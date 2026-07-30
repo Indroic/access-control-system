@@ -14,6 +14,7 @@ export const faceBiometricsClientPlugin = () =>
 					mimeType?: string;
 					userId: string;
 					performedBy?: string;
+					pose?: "front" | "right" | "left";
 				},
 				fetchOptions?: BetterFetchOption,
 			) =>

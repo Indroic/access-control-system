@@ -9,13 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AccessRouteImport } from './routes/access'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PanelRouteImport } from './routes/_panel'
+import { Route as AccessRouteImport } from './routes/access'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as PanelBitacoraRouteImport } from './routes/_panel/bitacora'
+import { Route as PanelDashboardRouteImport } from './routes/_panel/dashboard'
+import { Route as PanelIncidentesRouteImport } from './routes/_panel/incidentes'
+import { Route as PanelPersonalRouteImport } from './routes/_panel/personal'
+import { Route as PanelZonasRouteImport } from './routes/_panel/zonas'
 
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PanelRoute = PanelRouteImport.update({
+  id: '/_panel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccessRoute = AccessRouteImport.update({
@@ -23,49 +33,124 @@ const AccessRoute = AccessRouteImport.update({
   path: '/access',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PanelBitacoraRoute = PanelBitacoraRouteImport.update({
+  id: '/bitacora',
+  path: '/bitacora',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelDashboardRoute = PanelDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelIncidentesRoute = PanelIncidentesRouteImport.update({
+  id: '/incidentes',
+  path: '/incidentes',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelPersonalRoute = PanelPersonalRouteImport.update({
+  id: '/personal',
+  path: '/personal',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelZonasRoute = PanelZonasRouteImport.update({
+  id: '/zonas',
+  path: '/zonas',
+  getParentRoute: () => PanelRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/access': typeof AccessRoute
   '/admin': typeof AdminRoute
+  '/bitacora': typeof PanelBitacoraRoute
+  '/dashboard': typeof PanelDashboardRoute
+  '/incidentes': typeof PanelIncidentesRoute
+  '/personal': typeof PanelPersonalRoute
+  '/zonas': typeof PanelZonasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/access': typeof AccessRoute
   '/admin': typeof AdminRoute
+  '/bitacora': typeof PanelBitacoraRoute
+  '/dashboard': typeof PanelDashboardRoute
+  '/incidentes': typeof PanelIncidentesRoute
+  '/personal': typeof PanelPersonalRoute
+  '/zonas': typeof PanelZonasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_panel': typeof PanelRouteWithChildren
   '/access': typeof AccessRoute
   '/admin': typeof AdminRoute
+  '/_panel/bitacora': typeof PanelBitacoraRoute
+  '/_panel/dashboard': typeof PanelDashboardRoute
+  '/_panel/incidentes': typeof PanelIncidentesRoute
+  '/_panel/personal': typeof PanelPersonalRoute
+  '/_panel/zonas': typeof PanelZonasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/access' | '/admin'
+  fullPaths:
+    | '/'
+    | '/access'
+    | '/admin'
+    | '/bitacora'
+    | '/dashboard'
+    | '/incidentes'
+    | '/personal'
+    | '/zonas'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/access' | '/admin'
-  id: '__root__' | '/' | '/access' | '/admin'
+  to:
+    | '/'
+    | '/access'
+    | '/admin'
+    | '/bitacora'
+    | '/dashboard'
+    | '/incidentes'
+    | '/personal'
+    | '/zonas'
+  id:
+    | '__root__'
+    | '/'
+    | '/_panel'
+    | '/access'
+    | '/admin'
+    | '/_panel/bitacora'
+    | '/_panel/dashboard'
+    | '/_panel/incidentes'
+    | '/_panel/personal'
+    | '/_panel/zonas'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PanelRoute: typeof PanelRouteWithChildren
   AccessRoute: typeof AccessRoute
   AdminRoute: typeof AdminRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_panel': {
+      id: '/_panel'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof PanelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/access': {
@@ -75,18 +160,72 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccessRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_panel/bitacora': {
+      id: '/_panel/bitacora'
+      path: '/bitacora'
+      fullPath: '/bitacora'
+      preLoaderRoute: typeof PanelBitacoraRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/dashboard': {
+      id: '/_panel/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof PanelDashboardRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/incidentes': {
+      id: '/_panel/incidentes'
+      path: '/incidentes'
+      fullPath: '/incidentes'
+      preLoaderRoute: typeof PanelIncidentesRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/personal': {
+      id: '/_panel/personal'
+      path: '/personal'
+      fullPath: '/personal'
+      preLoaderRoute: typeof PanelPersonalRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/zonas': {
+      id: '/_panel/zonas'
+      path: '/zonas'
+      fullPath: '/zonas'
+      preLoaderRoute: typeof PanelZonasRouteImport
+      parentRoute: typeof PanelRoute
     }
   }
 }
 
+interface PanelRouteChildren {
+  PanelBitacoraRoute: typeof PanelBitacoraRoute
+  PanelDashboardRoute: typeof PanelDashboardRoute
+  PanelIncidentesRoute: typeof PanelIncidentesRoute
+  PanelPersonalRoute: typeof PanelPersonalRoute
+  PanelZonasRoute: typeof PanelZonasRoute
+}
+
+const PanelRouteChildren: PanelRouteChildren = {
+  PanelBitacoraRoute: PanelBitacoraRoute,
+  PanelDashboardRoute: PanelDashboardRoute,
+  PanelIncidentesRoute: PanelIncidentesRoute,
+  PanelPersonalRoute: PanelPersonalRoute,
+  PanelZonasRoute: PanelZonasRoute,
+}
+
+const PanelRouteWithChildren = PanelRoute._addFileChildren(PanelRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PanelRoute: PanelRouteWithChildren,
   AccessRoute: AccessRoute,
   AdminRoute: AdminRoute,
 }

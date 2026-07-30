@@ -1,9 +1,13 @@
 import { Buffer } from "node:buffer";
 
+import { createDb } from "@access-control-system/db";
+import { user } from "@access-control-system/db/schema/auth";
+import { userImage } from "@access-control-system/db/schema/media";
 import { env } from "@access-control-system/env/server";
 import type { BetterAuthPlugin, GenericEndpointContext } from "better-auth";
 import { APIError, createAuthEndpoint } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 type BiometricIdentifyResponse = {
@@ -26,16 +30,80 @@ const imagePayloadSchema = z.object({
 const registerFaceSchema = imagePayloadSchema.extend({
 	userId: z.string().min(1),
 	performedBy: z.string().optional(),
+	/** Pose capturada; se usa para etiquetar la evidencia en la galería. */
+	pose: z.enum(["front", "right", "left"]).optional(),
 });
 
 const authenticateFaceSchema = imagePayloadSchema;
 
-function base64ToBlob(imageBase64: string, mimeType = "image/jpeg") {
+/** Quita el prefijo `data:` de un data-URL y devuelve los bytes crudos. */
+function base64ToBuffer(imageBase64: string) {
 	const normalized = imageBase64.includes(",")
 		? (imageBase64.split(",").at(-1) ?? imageBase64)
 		: imageBase64;
-	const bytes = Buffer.from(normalized, "base64");
-	return new Blob([bytes], { type: mimeType });
+	return Buffer.from(normalized, "base64");
+}
+
+function base64ToBlob(imageBase64: string, mimeType = "image/jpeg") {
+	return new Blob([base64ToBuffer(imageBase64)], { type: mimeType });
+}
+
+const POSE_LABELS: Record<string, string> = {
+	front: "Captura frontal",
+	right: "Perfil derecho",
+	left: "Perfil izquierdo",
+};
+
+/**
+ * Archiva la fotografía usada en el enrolamiento como evidencia del alta.
+ *
+ * Nunca propaga errores: si el archivado falla, el enrolamiento biométrico —que
+ * ya se completó en el servicio de reconocimiento— debe seguir siendo un éxito.
+ */
+async function archiveRegistrationImage(input: {
+	userId: string;
+	imageBase64: string;
+	mimeType?: string;
+	pose?: "front" | "right" | "left";
+	performedBy?: string;
+}): Promise<void> {
+	try {
+		const bytes = base64ToBuffer(input.imageBase64);
+		if (bytes.byteLength === 0) return;
+
+		const db = createDb();
+
+		// `performedBy` llega del cliente: solo se guarda como operador si
+		// corresponde a un usuario real, o la FK abortaría el archivado.
+		let capturedBy: string | null = null;
+		if (input.performedBy) {
+			const [operator] = await db
+				.select({ id: user.id })
+				.from(user)
+				.where(eq(user.id, input.performedBy))
+				.limit(1);
+			capturedBy = operator?.id ?? null;
+		}
+
+		await db.insert(userImage).values({
+			userId: input.userId,
+			kind: "enrollment",
+			pose: input.pose ?? null,
+			label: input.pose
+				? (POSE_LABELS[input.pose] ?? null)
+				: "Captura de enrolamiento",
+			contentType: input.mimeType ?? "image/jpeg",
+			byteSize: bytes.byteLength,
+			data: bytes,
+			capturedBy,
+			source: "face-enrollment",
+		});
+	} catch (error) {
+		console.error(
+			"[biometrics] No se pudo archivar la imagen de registro:",
+			error,
+		);
+	}
 }
 
 async function callBiometricApi<TResponse>(
@@ -91,6 +159,15 @@ async function registerFaceHandler(ctx: GenericEndpointContext) {
 			body: formData,
 		},
 	);
+
+	// Evidencia fotográfica del alta: se archiva tras confirmar el enrolamiento.
+	await archiveRegistrationImage({
+		userId: body.userId,
+		imageBase64: body.imageBase64,
+		mimeType: body.mimeType,
+		pose: body.pose,
+		performedBy: body.performedBy,
+	});
 
 	const updatedUser = await ctx.context.internalAdapter.updateUser(
 		body.userId,

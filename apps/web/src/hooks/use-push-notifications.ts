@@ -46,9 +46,15 @@ export function usePushNotifications() {
 		const keyData = await keyRes.json();
 		const publicKey = keyData.result.data.publicKey as string;
 
+		// `PushManager.subscribe` exige un BufferSource respaldado por ArrayBuffer;
+		// se copia a uno propio para descartar el caso SharedArrayBuffer.
+		const keyBytes = urlBase64ToUint8Array(publicKey);
+		const applicationServerKey = new Uint8Array(keyBytes.byteLength);
+		applicationServerKey.set(keyBytes);
+
 		const subscription = await registration.pushManager.subscribe({
 			userVisibleOnly: true,
-			applicationServerKey: urlBase64ToUint8Array(publicKey),
+			applicationServerKey,
 		});
 
 		const res = await fetch("/api/trpc/notifications.subscribe", {

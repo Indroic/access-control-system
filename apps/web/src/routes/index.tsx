@@ -48,7 +48,7 @@ function EntryPoint() {
 		try {
 			const { data: sessionData } = await authClient.getSession();
 			if (sessionData?.user) {
-				navigate({ to: "/admin" });
+				navigate({ to: "/dashboard" });
 				return;
 			}
 			const setupRes = await fetch("/api/setup-status");
@@ -82,7 +82,7 @@ function EntryPoint() {
 			});
 			if (error)
 				throw new Error(error.message || "Credenciales de acceso inválidas.");
-			window.location.href = "/admin";
+			window.location.href = "/dashboard";
 		} catch (err: any) {
 			setLoginError(err.message || "Fallo de autenticación con el servidor.");
 		} finally {

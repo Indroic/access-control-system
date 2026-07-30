@@ -1,20 +1,36 @@
 import { createContext } from "@access-control-system/api/context";
 import { appRouter } from "@access-control-system/api/routers/index";
+import {
+	type IncidentFilter,
+	incidentStats,
+	queryIncidents,
+} from "@access-control-system/api/services/incidents";
 import { auth } from "@access-control-system/auth";
 import { createDb } from "@access-control-system/db";
 import { oneTimeToken, user } from "@access-control-system/db/schema/auth";
+import { userImage } from "@access-control-system/db/schema/media";
 import { pushSubscription } from "@access-control-system/db/schema/notifications";
+import {
+	securityIncident,
+	securityZone,
+} from "@access-control-system/db/schema/security";
 import { env } from "@access-control-system/env/server";
 import { trpcServer } from "@hono/trpc-server";
 import { and, eq, gt, inArray } from "drizzle-orm";
 import { EventEmitter } from "events";
-import { Hono } from "hono";
+import { Hono, type Context as HonoContext } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { streamSSE } from "hono/streaming";
 import webpush from "web-push";
 import { z } from "zod";
 import { notifySuspiciousLogin } from "./notifications/suspicious-login-notifier";
+import {
+	buildIncidentPdf,
+	buildIncidentWorkbook,
+	formatDate,
+	type ReportFilterSummary,
+} from "./reports/incident-report";
 
 const sseEvents = new EventEmitter();
 sseEvents.setMaxListeners(100);
@@ -27,6 +43,12 @@ const setupAdminSchema = z.object({
 });
 
 const app = new Hono();
+
+/** Roles autorizados a consultar evidencia de terceros y reportes. */
+const SECURITY_ROLES = ["admin", "gerente", "jefe"];
+
+/** Huso usado para fechar los reportes cuando el cliente no indica otro. */
+const DEFAULT_REPORT_TZ = "America/Caracas";
 
 webpush.setVapidDetails(
 	env.VAPID_SUBJECT,
@@ -111,21 +133,21 @@ app.post("/api/auth/one-time-token/verify", async (c) => {
 			)
 			.returning();
 
-		if (updated.length === 0) {
+		const consumed = updated[0];
+		if (!consumed) {
 			return c.json(
 				{ error: "Token has already been used, expired, or is invalid" },
 				401,
 			);
 		}
 
-		const userId = updated[0].userId;
-		const userRecord = await db
+		const [userRecord] = await db
 			.select()
 			.from(user)
-			.where(eq(user.id, userId))
+			.where(eq(user.id, consumed.userId))
 			.limit(1);
 
-		if (userRecord.length === 0) {
+		if (!userRecord) {
 			return c.json({ error: "Associated user not found" }, 404);
 		}
 
@@ -135,9 +157,9 @@ app.post("/api/auth/one-time-token/verify", async (c) => {
 		return c.json({
 			session: {
 				user: {
-					id: userRecord[0].id,
-					email: userRecord[0].email,
-					name: userRecord[0].name,
+					id: userRecord.id,
+					email: userRecord.email,
+					name: userRecord.name,
 				},
 			},
 		});
@@ -222,10 +244,48 @@ app.post("/api/internal/notifications/suspicious-login", async (c) => {
 	const db = createDb();
 
 	const [suspiciousUser] = await db
-		.select({ name: user.name })
+		.select({ name: user.name, email: user.email })
 		.from(user)
 		.where(eq(user.id, body.userId))
 		.limit(1);
+
+	// La detección de anomalía horaria alimenta el módulo de incidentes: queda
+	// auditable y exportable junto con los accesos fuera de turno a zonas.
+	const occurredAt = new Date(body.occurredAt);
+	const loginHour = Math.floor(body.loginHour);
+	const loginMinute = Math.round((body.loginHour - loginHour) * 60);
+	const hourLabel = `${String(loginHour).padStart(2, "0")}:${String(
+		loginMinute,
+	).padStart(2, "0")}`;
+	const personLabel = suspiciousUser?.name ?? "Un usuario del sistema";
+
+	try {
+		await db.insert(securityIncident).values({
+			occurredAt: Number.isNaN(occurredAt.getTime()) ? new Date() : occurredAt,
+			type: "anomalous_login_hour",
+			severity: body.score >= 4 ? "high" : "medium",
+			status: "open",
+			title: "Ingreso biométrico en horario inusual",
+			description: `${personLabel} accedió mediante reconocimiento facial a las ${hourLabel}, una hora que se aparta de su patrón histórico de ingresos (puntuación de anomalía ${body.score.toFixed(
+				2,
+			)}, motivo «${body.reason}»). Se recomienda verificar si el acceso fue autorizado.`,
+			userId: body.userId,
+			userNameSnapshot: suspiciousUser?.name ?? null,
+			userEmailSnapshot: suspiciousUser?.email ?? null,
+			source: "biometric-api",
+			ipAddress: body.ip ?? null,
+			userAgent: body.userAgent ?? null,
+			details: {
+				score: body.score,
+				reason: body.reason,
+				loginHour: body.loginHour,
+			},
+		});
+		sseEvents.emit("change");
+	} catch (error) {
+		// El registro del incidente nunca debe impedir el envío de la alerta.
+		console.error("[security] No se pudo registrar el incidente:", error);
+	}
 
 	const subscribers = await db
 		.select({
@@ -257,6 +317,193 @@ app.post("/api/internal/notifications/suspicious-login", async (c) => {
 	});
 
 	return c.json({ success: true, ...result });
+});
+
+/* ── Evidencia fotográfica ───────────────────────────────────────────────── */
+
+/**
+ * Sirve los bytes de una imagen de registro. Se sirve por HTTP en vez de por
+ * tRPC para que el navegador la trate como un recurso cacheable y el JSON del
+ * listado se mantenga liviano.
+ */
+app.get("/api/media/user-images/:id", async (c) => {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session) {
+		return c.json({ error: "Unauthorized" }, 401);
+	}
+
+	const db = createDb();
+	const [image] = await db
+		.select()
+		.from(userImage)
+		.where(eq(userImage.id, c.req.param("id")))
+		.limit(1);
+
+	if (!image) {
+		return c.json({ error: "Imagen no encontrada" }, 404);
+	}
+
+	// Cada quien ve su propia evidencia; el resto exige rol de supervisión.
+	const role = session.user.role ?? "user";
+	const isOwner = image.userId === session.user.id;
+	if (!isOwner && !SECURITY_ROLES.includes(role)) {
+		return c.json({ error: "Forbidden" }, 403);
+	}
+
+	return new Response(new Uint8Array(image.data), {
+		headers: {
+			"Content-Type": image.contentType,
+			"Content-Length": String(image.data.byteLength),
+			"Cache-Control": "private, max-age=3600",
+		},
+	});
+});
+
+/* ── Reportes de incidentes ──────────────────────────────────────────────── */
+
+function parseDateParam(value: string | undefined, endOfDay = false) {
+	if (!value) return undefined;
+	// Una fecha suelta (`2026-07-31`) se interpreta como el día completo.
+	const raw = /^\d{4}-\d{2}-\d{2}$/.test(value)
+		? `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}`
+		: value;
+	const parsed = new Date(raw);
+	return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function readReportFilters(c: HonoContext) {
+	const q = c.req.query();
+	return {
+		from: parseDateParam(q.from),
+		to: parseDateParam(q.to, true),
+		zoneId: q.zoneId || undefined,
+		userId: q.userId || undefined,
+		type: (q.type || undefined) as IncidentFilter["type"],
+		severity: (q.severity || undefined) as IncidentFilter["severity"],
+		status: (q.status || undefined) as IncidentFilter["status"],
+		search: q.search?.trim() || undefined,
+		limit: 5000,
+		offset: 0,
+	} satisfies Partial<IncidentFilter>;
+}
+
+async function buildFilterSummary(
+	filters: Partial<IncidentFilter>,
+	timeZone: string,
+): Promise<ReportFilterSummary> {
+	const db = createDb();
+
+	const range =
+		filters.from || filters.to
+			? `${filters.from ? formatDate(filters.from, timeZone) : "Inicio"} — ${
+					filters.to ? formatDate(filters.to, timeZone) : "Hoy"
+				}`
+			: "Histórico completo";
+
+	let zoneLabel = "Todas las zonas";
+	if (filters.zoneId) {
+		const [zone] = await db
+			.select({ name: securityZone.name, code: securityZone.code })
+			.from(securityZone)
+			.where(eq(securityZone.id, filters.zoneId))
+			.limit(1);
+		zoneLabel = zone ? `${zone.name} (${zone.code})` : filters.zoneId;
+	}
+
+	let userLabel = "Todo el personal";
+	if (filters.userId) {
+		const [subject] = await db
+			.select({ name: user.name, email: user.email })
+			.from(user)
+			.where(eq(user.id, filters.userId))
+			.limit(1);
+		userLabel = subject ? `${subject.name} (${subject.email})` : filters.userId;
+	}
+
+	return [
+		{ label: "Rango de fechas", value: range },
+		{ label: "Zona / Área", value: zoneLabel },
+		{ label: "Usuario", value: userLabel },
+		{ label: "Tipo de incidente", value: filters.type ?? "Todos" },
+		{ label: "Severidad", value: filters.severity ?? "Todas" },
+		{ label: "Estado", value: filters.status ?? "Todos" },
+		{ label: "Búsqueda", value: filters.search ?? "—" },
+	];
+}
+
+async function requireReportAccess(c: HonoContext) {
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
+	if (!session)
+		return { error: c.json({ error: "Unauthorized" }, 401) } as const;
+	const role = session.user.role ?? "user";
+	if (!SECURITY_ROLES.includes(role)) {
+		return { error: c.json({ error: "Forbidden" }, 403) } as const;
+	}
+	return { session } as const;
+}
+
+function reportFileName(extension: string) {
+	const stamp = new Date().toISOString().slice(0, 10);
+	return `incidentes-seguridad-${stamp}.${extension}`;
+}
+
+app.get("/api/reports/incidents.xlsx", async (c) => {
+	const access = await requireReportAccess(c);
+	if ("error" in access) return access.error;
+
+	const timeZone = c.req.query("tz") || DEFAULT_REPORT_TZ;
+	const filters = readReportFilters(c);
+	const [rows, stats, summary] = await Promise.all([
+		queryIncidents(filters),
+		incidentStats(filters),
+		buildFilterSummary(filters, timeZone),
+	]);
+
+	const workbook = await buildIncidentWorkbook(rows, {
+		generatedAt: new Date(),
+		generatedBy: `${access.session.user.name} <${access.session.user.email}>`,
+		timeZone,
+		filters: summary,
+		stats,
+	});
+
+	return new Response(new Uint8Array(workbook), {
+		headers: {
+			"Content-Type":
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			"Content-Disposition": `attachment; filename="${reportFileName("xlsx")}"`,
+			"Cache-Control": "no-store",
+		},
+	});
+});
+
+app.get("/api/reports/incidents.pdf", async (c) => {
+	const access = await requireReportAccess(c);
+	if ("error" in access) return access.error;
+
+	const timeZone = c.req.query("tz") || DEFAULT_REPORT_TZ;
+	const filters = readReportFilters(c);
+	const [rows, stats, summary] = await Promise.all([
+		queryIncidents(filters),
+		incidentStats(filters),
+		buildFilterSummary(filters, timeZone),
+	]);
+
+	const pdf = buildIncidentPdf(rows, {
+		generatedAt: new Date(),
+		generatedBy: `${access.session.user.name} <${access.session.user.email}>`,
+		timeZone,
+		filters: summary,
+		stats,
+	});
+
+	return new Response(new Uint8Array(pdf), {
+		headers: {
+			"Content-Type": "application/pdf",
+			"Content-Disposition": `attachment; filename="${reportFileName("pdf")}"`,
+			"Cache-Control": "no-store",
+		},
+	});
 });
 
 app.use(

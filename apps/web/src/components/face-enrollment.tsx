@@ -48,6 +48,7 @@ function issueMessage(issue: string, step: CaptureStep): string {
 async function uploadFrame(
 	userId: string,
 	imageBase64: string,
+	pose: CaptureStep,
 	performedBy?: string,
 ): Promise<void> {
 	const res = await fetch("/api/auth/face-biometrics/register-face", {
@@ -57,6 +58,7 @@ async function uploadFrame(
 			userId,
 			imageBase64,
 			mimeType: "image/jpeg",
+			pose,
 			performedBy,
 		}),
 	});
@@ -79,9 +81,9 @@ export function FaceEnrollment({
 		capture: camera.capture,
 		onComplete: async (frames) => {
 			await Promise.all([
-				uploadFrame(userId, frames.front.imageBase64, performedBy),
-				uploadFrame(userId, frames.right.imageBase64, performedBy),
-				uploadFrame(userId, frames.left.imageBase64, performedBy),
+				uploadFrame(userId, frames.front.imageBase64, "front", performedBy),
+				uploadFrame(userId, frames.right.imageBase64, "right", performedBy),
+				uploadFrame(userId, frames.left.imageBase64, "left", performedBy),
 			]);
 		},
 	});

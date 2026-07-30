@@ -21,6 +21,7 @@
 		"better-auth": "catalog:",
 		"dotenv": "catalog:",
 		"drizzle-orm": "catalog:",
+		"exceljs": "^4.4.0",
 		"hono": "catalog:",
 		"web-push": "^3.6.7",
 		"zod": "catalog:"

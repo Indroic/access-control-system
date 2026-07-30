@@ -1,6 +1,6 @@
 import { Alert, Button, Card, Chip } from "@heroui/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, ScanFace, X } from "lucide-react";
+import { ArrowLeft, Check, ScanFace, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
 	Brandmark,
@@ -9,8 +9,21 @@ import {
 	ThemeToggle,
 	ThermalLegend,
 } from "#/components/hud";
+import { trpcMutate } from "#/lib/trpc";
 
-export const Route = createFileRoute("/access")({ component: AccessKiosk });
+/**
+ * El kiosco es un terminal fijo montado en una puerta: la zona que vigila se
+ * fija en su URL (`/access?zona=SRV-01`) al configurarlo. Con la zona presente,
+ * cada acceso concedido se valida contra el horario permitido y, si cae fuera,
+ * queda registrado como incidente de seguridad.
+ */
+export const Route = createFileRoute("/access")({
+	component: AccessKiosk,
+	// El tipo de retorno marca `zona` como opcional: sin él, TanStack exigiría
+	// pasar `search` en cada navegación hacia /access.
+	validateSearch: (search: Record<string, unknown>): { zona?: string } =>
+		typeof search.zona === "string" ? { zona: search.zona } : {},
+});
 
 type KioskStatus =
 	| "loading-camera"
@@ -47,6 +60,8 @@ function AccessKiosk() {
 	} | null>(null);
 	const [countdown, setCountdown] = useState(5);
 	const [hardwarePending, setHardwarePending] = useState(false);
+	const [scheduleAlert, setScheduleAlert] = useState<string | null>(null);
+	const { zona } = Route.useSearch();
 
 	// Inicializar cámara web
 	useEffect(() => {
@@ -95,6 +110,32 @@ function AccessKiosk() {
 		setErrorMsg("");
 		setCountdown(5);
 		setHardwarePending(false);
+		setScheduleAlert(null);
+	}
+
+	/**
+	 * Valida el acceso recién concedido contra el horario de la zona. Nunca
+	 * interrumpe el flujo: si la validación falla técnicamente, el acceso
+	 * biométrico ya fue resuelto y solo se pierde el aviso en pantalla.
+	 */
+	async function validateSchedule() {
+		if (!zona) return;
+		try {
+			const result = await trpcMutate<{
+				allowed: boolean;
+				verdict: { localTime: string; windowLabel: string; reason: string };
+			}>("security.evaluateAccess", { zoneCode: zona, source: "kiosk" });
+
+			if (!result.allowed) {
+				setScheduleAlert(
+					result.verdict.reason === "zone_inactive"
+						? "Zona fuera de servicio. El acceso quedó registrado como incidente."
+						: `Acceso fuera del horario permitido (${result.verdict.windowLabel}). Se registró un incidente de seguridad.`,
+				);
+			}
+		} catch (error) {
+			console.warn("No se pudo validar el horario de la zona:", error);
+		}
 	}
 
 	async function handleScan() {
@@ -136,7 +177,12 @@ function AccessKiosk() {
 			const user = authData.user;
 			setIdentifiedUser({ name: user.name, email: user.email });
 			setStatus("opening");
-			await new Promise((resolve) => setTimeout(resolve, 1000));
+			// La sesión ya existe tras identificar el rostro, así que la validación
+			// horaria puede correr autenticada como la persona reconocida.
+			await Promise.all([
+				new Promise((resolve) => setTimeout(resolve, 1000)),
+				validateSchedule(),
+			]);
 			// El relé de puerta aún no está implementado.
 			setHardwarePending(true);
 			setStatus("success");
@@ -232,6 +278,16 @@ function AccessKiosk() {
 											{errorMsg ||
 												"No se encontró un rostro registrado coincidente."}
 										</p>
+									)}
+									{/* Identidad válida pero fuera del turno permitido */}
+									{status === "success" && scheduleAlert && (
+										<div className="flex max-w-sm items-start gap-2 rounded-md bg-warning/15 px-3 py-2 text-left">
+											<TriangleAlert
+												size={16}
+												className="mt-0.5 shrink-0 text-warning"
+											/>
+											<p className="text-sm text-white/90">{scheduleAlert}</p>
+										</div>
 									)}
 								</div>
 							)}

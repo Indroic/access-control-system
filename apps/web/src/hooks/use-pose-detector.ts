@@ -135,7 +135,9 @@ export function usePoseDetector({
 					bbox: null,
 				});
 			} else {
-				const matrix = matrices[0]!.data as Float32Array;
+				// MediaPipe tipa `data` como number[] aunque en runtime entrega un
+				// Float32Array; se normaliza para satisfacer a matrixToEuler.
+				const matrix = Float32Array.from(matrices[0]!.data);
 				const euler = matrixToEuler(matrix);
 				const pts = landmarks[0]!;
 				let minX = 1;
