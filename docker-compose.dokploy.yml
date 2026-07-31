@@ -1,0 +1,202 @@
+#################################################################################
+#                          docker-compose.dokploy.yml                           #
+#                                                                                #
+#  Stack único y autocontenido para desplegar access-control-system en Dokploy  #
+#  como UNA sola aplicación "Docker Compose". Plug and play:                    #
+#                                                                                #
+#    1. Crea la app en Dokploy (tipo "Compose"), apunta a este archivo.        #
+#    2. Pega las variables de .env.example en la pestaña "Environment"         #
+#       (genera BETTER_AUTH_SECRET, ADMIN_SETUP_SECRET, INTERNAL_API_KEY y el  #
+#       par VAPID propios para producción, no uses los valores de ejemplo).    #
+#    3. Deploy. Dokploy crea la red externa `dokploy-network` si no existe.    #
+#    4. En "Domains", asigna dominio público a `server`, `web` y               #
+#       `biometric-api` (arquitectura multi-origen, cada uno con su propio     #
+#       subdominio) en los puertos 3000, 3001 y 8000 respectivamente. Ajusta   #
+#       SERVER_PUBLIC_URL / WEB_PUBLIC_URL / BIOMETRIC_PUBLIC_URL a esos        #
+#       dominios reales.                                                       #
+#                                                                                #
+#  Aislamiento: postgres, las migraciones y los 3 servicios de la app viven en #
+#  la red privada `acs-private` (no visible para otros proyectos del mismo     #
+#  servidor Dokploy). Solo server/web/biometric-api se conectan ADEMÁS a       #
+#  `dokploy-network` para que Traefik pueda alcanzarlos. No se publica ningún  #
+#  puerto de host, así que no puede chocar con los puertos de mantainer-system,#
+#  medical-system ni ningún otro stack del servidor.                          #
+#################################################################################
+
+name: access-control-system
+
+# ─── Shared anchors ──────────────────────────────────────────────────────────
+x-database-url: &database-url postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-access-control-system}
+
+services:
+  # ── Base de datos PostgreSQL + pgvector — SOLO interno ──────────────────────
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: acs-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-access-control-system}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-access-control-system}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - acs-private
+
+  # ── Migración de esquema Drizzle (packages/db) — tarea de un solo disparo ──
+  migrate:
+    image: node:22-alpine
+    container_name: acs-migrate
+    working_dir: /monorepo
+    command: >
+      sh -c "
+        corepack enable &&
+        pnpm install --filter @access-control-system/db... --frozen-lockfile &&
+        pnpm --filter @access-control-system/db db:push
+      "
+    environment:
+      CI: "true"
+      DATABASE_URL: *database-url
+    volumes:
+      - .:/monorepo
+      - migrate_node_modules:/monorepo/node_modules
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - acs-private
+
+  # ── Migración Alembic del biometric-api — tarea de un solo disparo ─────────
+  biometric-migrate:
+    build:
+      context: .
+      dockerfile: apps/biometric-api/Dockerfile
+    container_name: acs-biometric-migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: *database-url
+      PYTHONUNBUFFERED: "1"
+    command: ["/app/.venv/bin/alembic", "-c", "/app/alembic.ini", "upgrade", "head"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - acs-private
+
+  # ── Hono backend ─────────────────────────────────────────────────────────
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: acs-server
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: *database-url
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET es obligatoria (openssl rand -hex 32)}
+      BETTER_AUTH_URL: ${SERVER_PUBLIC_URL:-http://localhost:3000}/api/auth
+      BIOMETRIC_API_URL: http://biometric-api:8000
+      CORS_ORIGIN: ${WEB_PUBLIC_URL:-http://localhost:3001}
+      ADMIN_SETUP_SECRET: ${ADMIN_SETUP_SECRET:?ADMIN_SETUP_SECRET es obligatoria}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY es obligatoria}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      acs-private:
+        aliases:
+          - server
+      dokploy-network:
+        aliases:
+          - acs-server-public
+
+  # ── TanStack Start (Vite) frontend ─────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: acs-web
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      NEXT_PUBLIC_SERVER_URL: ${SERVER_PUBLIC_URL:-}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY es obligatoria}
+      BIOMETRIC_API_URL: http://biometric-api:8000
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      acs-private:
+        aliases:
+          - web
+      dokploy-network:
+        aliases:
+          - acs-web-public
+
+  # ── Python biometric API ───────────────────────────────────────────────────
+  biometric-api:
+    build:
+      context: .
+      dockerfile: apps/biometric-api/Dockerfile
+    container_name: acs-biometric
+    environment:
+      DATABASE_URL: *database-url
+      HEXCORE_CONFIG_MODULE: "config"
+      BETTER_AUTH_URL: http://server:3000/api/auth
+      BETTER_AUTH_ISSUER: ${SERVER_PUBLIC_URL:-http://localhost:3000}/api/auth
+      BETTER_AUTH_AUDIENCE: ${SERVER_PUBLIC_URL:-http://localhost:3000}/api/auth
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY es obligatoria}
+      SERVER_INTERNAL_URL: http://server:3000
+    volumes:
+      # Cache de modelos InsightFace entre reinicios (~400 MB de descarga)
+      - insightface_models:/root/.insightface
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+      biometric-migrate:
+        condition: service_completed_successfully
+    networks:
+      acs-private:
+        aliases:
+          - biometric-api
+      dokploy-network:
+        aliases:
+          - acs-biometric-public
+
+networks:
+  # Red privada: solo los contenedores de este stack se resuelven entre sí.
+  acs-private:
+    driver: bridge
+  # Red compartida que crea Dokploy para el ingress de Traefik.
+  dokploy-network:
+    external: true
+
+volumes:
+  postgres_data:
+  migrate_node_modules:
+  insightface_models:
