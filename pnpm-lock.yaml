@@ -19,7 +19,7 @@ catalogs:
       specifier: ^17.2.2
       version: 17.4.2
     drizzle-orm:
-      specifier: ^0.45.2
+      specifier: ^0.45.1
       version: 0.45.2
     hono:
       specifier: ^4.8.2
