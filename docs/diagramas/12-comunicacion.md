@@ -12,7 +12,7 @@ Flujo más representativo: Web → Hono/plugin → API biométrica → pgvector 
 
 ```mermaid
 flowchart LR
-    O_KIOSK(["kiosko : access.tsx"])
+    O_KIOSK(["Escaner Biometrico : access.tsx"])
     O_PLUGIN(["plugin : faceBiometricsPlugin"])
     O_ADAPTER(["adapter : internalAdapter"])
     O_API(["router : /v1/biometrics"])
@@ -82,7 +82,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    O_KIOSK(["kiosko : access.tsx"])
+    O_KIOSK(["Escaner Biometrico : access.tsx"])
     O_DOOR(["doorRouter : tRPC"])
     O_OTT[("oneTimeToken : postgres")]
     O_API(["router : /v1/biometrics/hardware/open-door"])

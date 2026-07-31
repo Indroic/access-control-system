@@ -106,7 +106,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A([Inicio: kiosko encendido]) --> B[/Capturar rostro<br/>cada N segundos/]
+    A([Inicio: Escaner Biometrico encendido]) --> B[/Capturar rostro<br/>cada N segundos/]
     B --> C[authClient.authenticateFace<br/>imageBase64]
     C --> D[POST /api/auth/face-biometrics/authenticate-face]
     D --> E[base64 -> FormData]

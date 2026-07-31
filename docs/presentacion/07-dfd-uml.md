@@ -34,7 +34,7 @@ flowchart LR
 
 ### Lectura del diagrama
 
-- El **empleado** se presenta frente al kiosko y entrega su rostro. El sistema le responde abriendo o no la puerta.
+- El **empleado** se presenta frente al Escaner Biometrico y entrega su rostro. El sistema le responde abriendo o no la puerta.
 - El **administrador** registra empleados y consulta información a través de su computador.
 - La **puerta** recibe órdenes del sistema y se abre cuando corresponde.
 
@@ -71,8 +71,8 @@ flowchart TB
     P5 -->|"actualiza estado"| D1
     P5 -->|"confirmación"| ADMIN
 
-    %% Empleado en el kiosko
-    EMP -->|"se acerca al kiosko"| P2
+    %% Empleado en el Escaner Biometrico
+    EMP -->|"se acerca al Escaner Biometrico"| P2
     P2 -->|"imagen del rostro"| P3
     P3 -->|"consulta rostros"| D2
     D2 -->|"rostros registrados"| P3
@@ -89,7 +89,7 @@ flowchart TB
 | # | Proceso | Función |
 |---|---------|---------|
 | 1.0 | Gestionar Usuarios | Crear, listar y eliminar cuentas. |
-| 2.0 | Capturar Imagen | Tomar la foto del rostro en el kiosko o durante el enrolamiento. |
+| 2.0 | Capturar Imagen | Tomar la foto del rostro en el Escaner Biometrico o durante el enrolamiento. |
 | 3.0 | Reconocer Rostro | Detectar el rostro en la imagen y extraer sus rasgos. Compararlos con los rostros registrados. |
 | 4.0 | Controlar Acceso | Decidir si la persona puede entrar y dar la orden de apertura. |
 | 5.0 | Enrolar Empleado | Registrar el rostro de un nuevo empleado en el sistema. |

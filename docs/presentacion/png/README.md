@@ -11,7 +11,7 @@ Renderizados con [`@mermaid-js/mermaid-cli`](https://github.com/mermaid-js/merma
 | `flujo-1-registro-usuario.png` | F1 – Registro de usuario | `02-flujos.md` | 1444 × 2340 |
 | `flujo-2-inicio-sesion.png` | F2 – Inicio de sesión | `02-flujos.md` | 1298 × 2188 |
 | `flujo-3-registro-biometrico.png` | F3 – Registro biométrico | `02-flujos.md` | 1440 × 3304 |
-| `flujo-4-identificacion-kiosko.png` | F4 – Identificación en kiosko | `02-flujos.md` | 1492 × 3012 |
+| `flujo-4-identificacion-Escaner Biometrico.png` | F4 – Identificación en Escaner Biometrico | `02-flujos.md` | 1492 × 3012 |
 | `flujo-5-gestion-usuarios.png` | F5 – Gestión de usuarios | `02-flujos.md` | 996 × 2386 |
 | `mapa-navegacion.png` | Mapa de navegación | `06-mapa-navegacion.md` | 2798 × 1356 |
 | `dfd-nivel-0-contexto.png` | DFD Nivel 0 – Contexto | `07-dfd-uml.md` | 1784 × 484 |

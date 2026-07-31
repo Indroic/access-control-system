@@ -12,7 +12,7 @@ Convenciones (Mermaid): `subgraph` = componente compuesto, caja = componente/mó
 flowchart TB
     subgraph WEB["&lt;&lt;component&gt;&gt; apps/web (TanStack Start)"]
         UI_ADMIN["routes/admin<br/>gestión usuarios + auditoría"]
-        UI_ACCESS["routes/access<br/>kiosko reconocimiento facial"]
+        UI_ACCESS["routes/access<br/>Escaner Biometrico reconocimiento facial"]
         UI_ENROLL["face-enrollment<br/>+ use-camera / use-pose-detector"]
         TRPC_CLIENT["trpc client + authClient"]
     end

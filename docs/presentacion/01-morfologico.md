@@ -14,7 +14,7 @@ graph TD
 
     M1 --> M1A["Pantalla de Inicio<br/>de Sesión"]
     M1 --> M1B["Panel de<br/>Administración"]
-    M1 --> M1C["Estación de Acceso<br/>(Kiosko)"]
+    M1 --> M1C["Estación de Acceso<br/>(Escaner Biometrico)"]
 
     M2 --> M2A["Registro de<br/>Usuarios"]
     M2 --> M2B["Autenticación<br/>por Credenciales"]

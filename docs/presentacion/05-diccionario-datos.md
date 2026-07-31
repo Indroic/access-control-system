@@ -78,7 +78,7 @@ Información que circula entre los componentes durante un proceso, pero que no q
 
 | Dato | Descripción |
 |------|-------------|
-| Imagen capturada | Fotografía tomada por la cámara del kiosko. Se procesa y se descarta de inmediato. |
+| Imagen capturada | Fotografía tomada por la cámara del Escaner Biometrico. Se procesa y se descarta de inmediato. |
 | Resultado de identificación | Respuesta del módulo de reconocimiento: "coincide con el usuario X" o "no coincide". |
 | Señal de apertura | Orden enviada al hardware de la puerta para abrirla. |
 

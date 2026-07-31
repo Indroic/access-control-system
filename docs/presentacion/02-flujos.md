@@ -64,13 +64,13 @@ flowchart TD
 
 ---
 
-## Flujo 4 — Identificación facial y acceso (estación de kiosko)
+## Flujo 4 — Identificación facial y acceso (estación de Escaner Biometrico)
 
-Flujo principal del sistema: el empleado se para frente al kiosko y pide acceso.
+Flujo principal del sistema: el empleado se para frente al Escaner Biometrico y pide acceso.
 
 ```mermaid
 flowchart TD
-    A([Inicio: persona frente al kiosko]) --> B[Capturar imagen del rostro]
+    A([Inicio: persona frente al Escaner Biometrico]) --> B[Capturar imagen del rostro]
     B --> C[Enviar imagen al servicio<br/>de reconocimiento]
     C --> D{¿Se detecta<br/>un rostro?}
     D -->|No| D1[Mensaje 'acérquese a la cámara'] --> B

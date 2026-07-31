@@ -47,7 +47,7 @@ erDiagram
 - **Cuenta**: forma en que el usuario inicia sesión. Hoy se usa correo + contraseña.
 - **Sesión**: período en que el usuario está autenticado en el sistema.
 - **Rostro**: representación matemática (numérica) del rostro del usuario. Un mismo usuario puede tener varias capturas para mayor precisión.
-- **Acceso**: cada vez que alguien intenta entrar por el kiosko se guarda un registro con la fecha, hora y resultado.
+- **Acceso**: cada vez que alguien intenta entrar por el Escaner Biometrico se guarda un registro con la fecha, hora y resultado.
 
 ## Cardinalidades
 

@@ -4,7 +4,7 @@ Representa las rutas de la aplicación Next.js (`apps/web`), agrupadas por *rout
 
 - 🟢 = ruta pública (no requiere sesión).
 - 🔒 = ruta protegida (redirige a `/login` si no hay sesión).
-- 📷 = ruta de kiosko (no requiere sesión interactiva — autentica por rostro).
+- 📷 = ruta de Escaner Biometrico (no requiere sesión interactiva — autentica por rostro).
 - Las llamadas a tRPC/Better-Auth se muestran al lado de la ruta que las dispara.
 
 ---
@@ -30,7 +30,7 @@ graph TD
     ADM_LOGIN --> ADM
 
     subgraph Kiosk["Route Group (kiosk)"]
-        ACC["/access<br/>📷 Kiosko de acceso<br/>(captura facial)"]
+        ACC["/access<br/>📷 Escaner Biometrico de acceso<br/>(captura facial)"]
     end
 
     ROOT -.->|dispositivo kiosk<br/>arranque directo| ACC
@@ -78,7 +78,7 @@ flowchart LR
     DEL -->|success| ADM
 ```
 
-### 2.3 Sección kiosko (`/access`)
+### 2.3 Sección Escaner Biometrico (`/access`)
 
 ```mermaid
 flowchart LR
@@ -121,7 +121,7 @@ Las siguientes carpetas existen vacías en el árbol; son intención declarada d
 |------|--------|-------------------|
 | `/admin` | 📁 vacía | Listado y gestión de usuarios + registro biométrico |
 | `/admin/login` | 📁 vacía | Login alternativo con UI propia de admin |
-| `/access` | 📁 vacía | Pantalla de kiosko con cámara y feedback en tiempo real |
+| `/access` | 📁 vacía | Pantalla de Escaner Biometrico con cámara y feedback en tiempo real |
 
 Recomendación: o se completan, o se eliminan los route groups `(admin)`/`(kiosk)` para no confundir al lector ni al router de Next.js.
 
