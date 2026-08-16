@@ -1,6 +1,7 @@
 {
 	"name": "access-control-system",
 	"private": true,
+	"license": "MIT",
 	"workspaces": [
 		"apps/*",
 		"packages/*"

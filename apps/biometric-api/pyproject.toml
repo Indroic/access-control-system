@@ -1,8 +1,9 @@
 [project]
 name = "biometric-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "Motor biométrico facial del sistema de control de acceso: InsightFace + ONNX Runtime sobre pgvector"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.136.1",
