@@ -23,14 +23,14 @@ graph LR
         DBbio[("biometric_db<br/>Alembic / SQLAlchemy")]
     end
 
-    Browser -- "HTTP+cookies (credentials:include)" --> Web
-    Web -- "/trpc/* + /api/auth/*" --> Server
-    Server -- "POST /biometrics/* (multipart, no auth header)" --> Bio
-    Bio -- "POST /one-time-token/verify (open-door only)" --> Server
-    Bio -- "JWKS fetch (configured, not yet used at runtime)" -.-> Server
+    Browser -->|"HTTP+cookies (credentials:include)"| Web
+    Web -->|"/trpc/* + /api/auth/*"| Server
+    Server -->|"POST /biometrics/* (multipart, no auth header)"| Bio
+    Bio -->|"POST /one-time-token/verify (open-door only)"| Server
+    Bio -.->|"JWKS fetch (configured, not yet used at runtime)"| Server
 
-    Server -- "node-postgres (drizzle)" --> DBacs
-    Bio -- "asyncpg / SQLAlchemy" --> DBbio
+    Server -->|"node-postgres (drizzle)"| DBacs
+    Bio -->|"asyncpg / SQLAlchemy"| DBbio
 ```
 
 **Note:** Even though both DBs live on the same Postgres instance, they are separate logical databases. There is no FK from `biometric_db.user_face.user_id` to `access-control-system.user.id` — that referential integrity is the application's job.
@@ -72,7 +72,7 @@ graph TD
 
     db --> env
 
-    bio -. "out-of-band: hits server /api/auth/*" .-> server
+    bio -.->|"out-of-band: hits server /api/auth/*"| server
 ```
 
 Observation: `apps/web` only imports the `AppRouter` *type* from `packages/api` — there's no runtime code crossing that boundary, which is the right shape for tRPC.
